@@ -1,10 +1,12 @@
 // Copyright (c) 2018 Sergey Lyubka
 // All rights reserved
 
+#include <stdlib.h>
+#include <string.h>
+
 enum {
   MJSON_ERROR_INVALID_INPUT = -1,
   MJSON_ERROR_TOO_DEEP = -2,
-  MJSON_ERROR_INCOMPLETE = -3,
 };
 
 enum mjson_tok {
@@ -68,11 +70,12 @@ static int mjson(const char *s, int len, mjson_cb_t cb, void *ud) {
           i += 4;
           tok = MJSON_TOK_FALSE;
         } else if (c == '-' || ((c >= '0' && c <= '9'))) {
-          if (c == '-') i++;
-          while (i < len && s[i + 1] >= '0' && s[i + 1] <= '9') i++;
+          char *end = NULL;
+          strtod(&s[i], &end);
+          if (end != NULL) i += end - &s[i] - 1;
           tok = MJSON_TOK_NUMBER;
         } else if (c == '"') {
-          int n = mjson_pass_string(&s[i + 1], len - i);
+          int n = mjson_pass_string(&s[i + 1], len - i - 1);
           if (n < 0) return n;
           i += n + 1;
           tok = MJSON_TOK_STRING;
@@ -88,7 +91,7 @@ static int mjson(const char *s, int len, mjson_cb_t cb, void *ud) {
 
       case S_KEY:
         if (c == '"') {
-          int n = mjson_pass_string(&s[i + 1], len - i);
+          int n = mjson_pass_string(&s[i + 1], len - i - 1);
           if (n < 0) return n;
           i += n + 1;
           tok = MJSON_TOK_KEY;
@@ -126,12 +129,13 @@ static int mjson(const char *s, int len, mjson_cb_t cb, void *ud) {
     }
     MJSONCALL(tok);
   }
-  return MJSON_ERROR_INCOMPLETE;
+  return MJSON_ERROR_INVALID_INPUT;
 }
 
 struct msjon_find_data {
   const char *path;
   int pos;
+  int depth;
   const char **dst;
   int *dstlen;
   int tok;
@@ -139,15 +143,20 @@ struct msjon_find_data {
 
 static void mjson_find_cb(int ev, const char *s, int len, void *ud) {
   struct msjon_find_data *data = (struct msjon_find_data *) ud;
-  printf("--> %d [%s] [%.*s]\n", ev, data->path + data->pos, len, s);
-  if (ev == '{' && data->path[data->pos] == '.') {
-    data->pos++;
-  } else if (ev == MJSON_TOK_KEY &&
+  // printf("--> %d [%s] [%.*s]\n", ev, data->path + data->pos, len, s);
+  if (ev == '{') {
+    if (data->path[data->pos] == '.') {
+      data->pos++;
+    } else {
+      data->depth++;
+    }
+  } else if (ev == MJSON_TOK_KEY && data->depth == 0 &&
              !memcmp(s + 1, &data->path[data->pos], len - 2)) {
     data->pos += len - 2;
   } else if (ev == '}') {
-    while (data->pos > 1 && data->path[data->pos] != '.') data->pos--;
-  } else if (ev & MJSON_TOK_VALUE && data->path[data->pos] == '\0') {
+    data->depth--;
+  } else if (ev & MJSON_TOK_VALUE && data->depth == 0 &&
+             data->path[data->pos] == '\0') {
     data->tok = ev;
     if (data->dst) *data->dst = s;
     if (data->dstlen) *data->dstlen = len;
@@ -156,8 +165,51 @@ static void mjson_find_cb(int ev, const char *s, int len, void *ud) {
 
 enum mjson_tok mjson_find(const char *s, int len, const char *path,
                           const char **tokptr, int *toklen) {
-  struct msjon_find_data data = {path, 1, tokptr, toklen, MJSON_TOK_INVALID};
-  // if (path[0] != '$') return MJSON_TOK_INVALID;
-  mjson(s, len, mjson_find_cb, &data);
+  struct msjon_find_data data = {path, 1, 0, tokptr, toklen, MJSON_TOK_INVALID};
+  if (path[0] != '$') return MJSON_TOK_INVALID;
+  if (mjson(s, len, mjson_find_cb, &data) < 0) return MJSON_TOK_INVALID;
   return data.tok;
+}
+
+double mjson_find_number(const char *s, int len, const char *path, double def) {
+  const char *p;
+  int n;
+  double value = def;
+  if (mjson_find(s, len, path, &p, &n) == MJSON_TOK_NUMBER) {
+    value = strtod(p, NULL);
+  }
+  return value;
+}
+
+int mjson_find_bool(const char *s, int len, const char *path, int dflt) {
+  int value = dflt, tok = mjson_find(s, len, path, NULL, NULL);
+  if (tok == MJSON_TOK_TRUE) value = 1;
+  if (tok == MJSON_TOK_FALSE) value = 0;
+  return value;
+}
+
+static int mjson_unescape(const char *s, int len, char *to, int n) {
+  int i, j;
+  for (i = 0, j = 0; i < len && j < n; i++, j++) {
+    if (s[i] == '\\' && i + 1 < len) {
+      const char *esc1 = "bfnrt\\\"/";
+      const char *esc2 = "\b\f\n\r\t\\\"/";
+      const char *p = strchr(esc1, s[i + 1]);
+      if (p != NULL) to[j] = esc2[p - esc1];
+      i++;
+    } else {
+      to[j] = s[i];
+    }
+  }
+  if (j >= n) return -1;
+  if (n > 0) to[j] = '\0';
+  return j;
+}
+
+int mjson_find_string(const char *s, int len, const char *path, char *to,
+                      int n) {
+  const char *p;
+  int sz;
+  if (mjson_find(s, len, path, &p, &sz) != MJSON_TOK_STRING) return 0;
+  return mjson_unescape(p + 1, sz - 2, to, n);
 }
