@@ -73,7 +73,10 @@ static void test_find(void) {
   assert(mjson_find("{\"a\":{\"c\":null},\"c\":2}", 22, "$.a.c", &p, &n) ==
          MJSON_TOK_NULL);
   assert(n == 4 && memcmp(p, "null", 4) == 0);
-  printf("-->%d\n", mjson_find("{\"a\":[1,null]}", 15, "$.a", &p, &n));
+  assert(mjson_find("{\"a\":[1,null]}", 15, "$.a", &p, &n) == '[');
+  assert(n == 8 && memcmp(p, "[1,null]", 8) == 0);
+  assert(mjson_find("{\"a\":{\"b\":7}}", 14, "$.a", &p, &n) == '{');
+  assert(n == 7 && memcmp(p, "{\"b\":7}", 7) == 0);
 }
 
 static void test_find_number(void) {
