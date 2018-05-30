@@ -44,11 +44,24 @@ static int mjson(const char *s, int len, mjson_cb_t cb, void *ud) {
 #define MJSONCALL(ev) \
   if (cb) cb(ev, &s[start], i - start + 1, ud)
 
+// In the ascii table, the distance between `[` and `]` is 2.
+// Ditto for `{` and `}`. Hence +2 in the code below.
+#define MJSONEOO()                                                     \
+  do {                                                                 \
+    if (c != nesting[depth - 1] + 2) return MJSON_ERROR_INVALID_INPUT; \
+    depth--;                                                           \
+    if (depth == 0) {                                                  \
+      MJSONCALL(tok);                                                  \
+      return i + 1;                                                    \
+    }                                                                  \
+  } while (0)
+
   for (i = 0; i < len; i++) {
     int start = i;
     unsigned char c = ((unsigned char *) s)[i];
     enum mjson_tok tok = c;
     if (c == ' ' || c == '\t' || c == '\n' || c == '\r') continue;
+    // printf("- %c [%.*s] %d %d\n", c, i, s, depth, expecting);
     switch (expecting) {
       case S_VALUE:
         if (c == '{') {
@@ -60,6 +73,8 @@ static int mjson(const char *s, int len, mjson_cb_t cb, void *ud) {
           if (depth >= (int) sizeof(nesting)) return MJSON_ERROR_TOO_DEEP;
           nesting[depth++] = c;
           break;
+        } else if (c == ']') {
+          MJSONEOO();
         } else if (c == 't' && i + 3 < len && memcmp(&s[i], "true", 4) == 0) {
           i += 3;
           tok = MJSON_TOK_TRUE;
@@ -96,6 +111,9 @@ static int mjson(const char *s, int len, mjson_cb_t cb, void *ud) {
           i += n + 1;
           tok = MJSON_TOK_KEY;
           expecting = S_COLON;
+        } else if (c == '}') {
+          MJSONEOO();
+          expecting = S_COMMA_OR_EOO;
         } else {
           return MJSON_ERROR_INVALID_INPUT;
         }
@@ -114,14 +132,7 @@ static int mjson(const char *s, int len, mjson_cb_t cb, void *ud) {
         if (c == ',') {
           expecting = (nesting[depth - 1] == '{') ? S_KEY : S_VALUE;
         } else if (c == ']' || c == '}') {
-          // In the ascii table, the distance between `[` and `]` is 2.
-          // Ditto for `{` and `}`. Hence +2 in the code below.
-          if (c != nesting[depth - 1] + 2) return MJSON_ERROR_INVALID_INPUT;
-          depth--;
-          if (depth == 0) {
-            MJSONCALL(tok);
-            return i + 1;
-          }
+          MJSONEOO();
         } else {
           return MJSON_ERROR_INVALID_INPUT;
         }
@@ -136,6 +147,7 @@ struct msjon_find_data {
   const char *path;     // Lookup json path
   int pos;              // Current path index
   int depth;            // Current depth of traversal
+  int array_index;      // Index in an array
   const char *obj;      // If the value is array/object, record its start
   const char **tokptr;  // Destination
   int *toklen;          // Destination length
@@ -144,8 +156,8 @@ struct msjon_find_data {
 
 static void mjson_find_cb(int ev, const char *s, int len, void *ud) {
   struct msjon_find_data *data = (struct msjon_find_data *) ud;
-  // printf("--> %d [%s] [%.*s] %d\n", ev, data->path + data->pos, len, s,
-  //        data->depth);
+  printf("--> %d [%s] [%.*s] %d\n", ev, data->path + data->pos, len, s,
+         data->depth);
   if (data->tok != MJSON_TOK_INVALID) {
     return;
   } else if (ev == '{') {
@@ -167,7 +179,6 @@ static void mjson_find_cb(int ev, const char *s, int len, void *ud) {
       data->tok = s[0] - 2;
       if (data->tokptr) *data->tokptr = data->obj;
       if (data->toklen) *data->toklen = s - data->obj + 1;
-      // printf(" -----[%.*s]----\n", s - data->obj, data->obj);
     }
   } else if (ev & MJSON_TOK_VALUE && data->depth == 0 &&
              data->path[data->pos] == '\0') {
@@ -179,8 +190,8 @@ static void mjson_find_cb(int ev, const char *s, int len, void *ud) {
 
 enum mjson_tok mjson_find(const char *s, int len, const char *path,
                           const char **tokptr, int *toklen) {
-  struct msjon_find_data data = {
-      path, 1, 0, NULL, tokptr, toklen, MJSON_TOK_INVALID};
+  struct msjon_find_data data = {path, 1,      0,      0,
+                                 NULL, tokptr, toklen, MJSON_TOK_INVALID};
   if (path[0] != '$') return MJSON_TOK_INVALID;
   if (mjson(s, len, mjson_find_cb, &data) < 0) return MJSON_TOK_INVALID;
   return data.tok;

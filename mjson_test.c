@@ -56,6 +56,16 @@ static void test_cb(void) {
   assert(mjson("{\"a\":1}", 5, NULL, NULL) == MJSON_ERROR_INVALID_INPUT);
   assert(mjson("{\"a\":1}", 6, NULL, NULL) == MJSON_ERROR_INVALID_INPUT);
   assert(mjson("{\"a\":1}", 7, NULL, NULL) == 7);
+
+  assert(mjson("{\"a\":[]}", 8, NULL, NULL) == 8);
+  assert(mjson("{\"a\":{}}", 8, NULL, NULL) == 8);
+  assert(mjson("[]", 2, NULL, NULL) == 2);
+  assert(mjson("{}", 2, NULL, NULL) == 2);
+  assert(mjson("[[]]", 4, NULL, NULL) == 4);
+  assert(mjson("[[],[]]", 7, NULL, NULL) == 7);
+  assert(mjson("[{}]", 4, NULL, NULL) == 4);
+  assert(mjson("[{},{}]", 7, NULL, NULL) == 7);
+  assert(mjson("{\"a\":[{}]}", 10, NULL, NULL) == 10);
 }
 
 static void test_find(void) {
@@ -84,6 +94,12 @@ static void test_find_number(void) {
   assert(mjson_find_number("234", 3, "$", 123) == 234);
   assert(mjson_find_number("{\"a\":-7}", 8, "$.a", 123) == -7);
   assert(mjson_find_number("{\"a\":1.2e3}", 11, "$.a", 123) == 1.2e3);
+  assert(mjson_find_number("[1.23,-43.47,17]", 16, "$", 42) == 42);
+  // assert(mjson_find_number("[1.23,-43.47,17]", 16, "$[0]", 42) == 1.23);
+  {
+    const char *s = "{\"a1\":[1,2,{\"a2\":4},[],{}],\"a\":3}";
+    assert(mjson_find_number(s, strlen(s), "$.a", 0) == 3);
+  }
 }
 
 static void test_find_bool(void) {
