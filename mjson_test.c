@@ -3,42 +3,30 @@
 
 #include "mjson.h"
 
-static void cb(int ev, const char *s, int len, void *ud) {
-  // const char *states[] = {"value", "literal", "string", "escape", "utf8"};
-  // const char *actions[] = {"none", "start", "end", "start_s", "end_s"};
-  // printf("%s\t%s\t[%.*s]\n", states[st], actions[ac], len, s);
-  // const char *names[] = {"value", "key", "colon", "comma"};
-  // printf("%d\t[%.*s]\n", ev, len, s);
-  (void) s;
-  (void) len;
-  (void) ev;
-  (void) ud;
-}
-
 static void test_cb(void) {
   {
     const char *s = "{\"a\": true, \"b\": [ null, 3 ]}";
-    assert(mjson(s, strlen(s), cb, NULL) == (int) strlen(s));
+    assert(mjson(s, strlen(s), NULL, NULL) == (int) strlen(s));
   }
   {
     const char *s = "[ 1, 2 ,  null, true,false,\"foo\"  ]";
-    assert(mjson(s, strlen(s), cb, NULL) == (int) strlen(s));
+    assert(mjson(s, strlen(s), NULL, NULL) == (int) strlen(s));
   }
   {
     const char *s = "123";
-    assert(mjson(s, strlen(s), cb, NULL) == (int) strlen(s));
+    assert(mjson(s, strlen(s), NULL, NULL) == (int) strlen(s));
   }
   {
     const char *s = "\"foo\"";
-    assert(mjson(s, strlen(s), cb, NULL) == (int) strlen(s));
+    assert(mjson(s, strlen(s), NULL, NULL) == (int) strlen(s));
   }
   {
     const char *s = "123 ";  // Trailing space
-    assert(mjson(s, strlen(s), cb, NULL) == (int) strlen(s) - 1);
+    assert(mjson(s, strlen(s), NULL, NULL) == (int) strlen(s) - 1);
   }
   {
     const char *s = "[[[[[[[[[[[[[[[[[[[[[";
-    assert(mjson(s, strlen(s), cb, NULL) == MJSON_ERROR_TOO_DEEP);
+    assert(mjson(s, strlen(s), NULL, NULL) == MJSON_ERROR_TOO_DEEP);
   }
 
   assert(mjson("\"abc\"", 0, NULL, NULL) == MJSON_ERROR_INVALID_INPUT);
@@ -95,7 +83,10 @@ static void test_find_number(void) {
   assert(mjson_find_number("{\"a\":-7}", 8, "$.a", 123) == -7);
   assert(mjson_find_number("{\"a\":1.2e3}", 11, "$.a", 123) == 1.2e3);
   assert(mjson_find_number("[1.23,-43.47,17]", 16, "$", 42) == 42);
-  // assert(mjson_find_number("[1.23,-43.47,17]", 16, "$[0]", 42) == 1.23);
+  assert(mjson_find_number("[1.23,-43.47,17]", 16, "$[0]", 42) == 1.23);
+  assert(mjson_find_number("[1.23,-43.47,17]", 16, "$[1]", 42) == -43.47);
+  assert(mjson_find_number("[1.23,-43.47,17]", 16, "$[2]", 42) == 17);
+  assert(mjson_find_number("[1.23,-43.47,17]", 16, "$[3]", 42) == 42);
   {
     const char *s = "{\"a1\":[1,2,{\"a2\":4},[],{}],\"a\":3}";
     assert(mjson_find_number(s, strlen(s), "$.a", 0) == 3);
