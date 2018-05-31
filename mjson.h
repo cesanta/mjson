@@ -12,13 +12,15 @@ enum {
 enum mjson_tok {
   MJSON_TOK_INVALID = 0,
   MJSON_TOK_KEY = 1,
-  MJSON_TOK_VALUE = 128,
-  MJSON_TOK_STRING = 129,
-  MJSON_TOK_NUMBER = 130,
-  MJSON_TOK_TRUE = 131,
-  MJSON_TOK_FALSE = 132,
-  MJSON_TOK_NULL = 133,
+  MJSON_TOK_STRING = 11,
+  MJSON_TOK_NUMBER = 12,
+  MJSON_TOK_TRUE = 13,
+  MJSON_TOK_FALSE = 14,
+  MJSON_TOK_NULL = 15,
+  MJSON_TOK_ARRAY = 91,
+  MJSON_TOK_OBJECT = 123,
 };
+#define MJSON_TOK_IS_VALUE(t) ((t) > 10 && (t) < 20)
 
 typedef void (*mjson_cb_t)(int ev, const char *s, int off, int len, void *ud);
 
@@ -61,7 +63,7 @@ static int mjson(const char *s, int len, mjson_cb_t cb, void *ud) {
   for (i = 0; i < len; i++) {
     int start = i;
     unsigned char c = ((unsigned char *) s)[i];
-    enum mjson_tok tok = c;
+    int tok = c;
     if (c == ' ' || c == '\t' || c == '\n' || c == '\r') continue;
     // printf("- %c [%.*s] %d %d\n", c, i, s, depth, expecting);
     switch (expecting) {
@@ -148,66 +150,73 @@ static int mjson(const char *s, int len, mjson_cb_t cb, void *ud) {
 struct msjon_find_data {
   const char *path;     // Lookup json path
   int pos;              // Current path index
-  int depth;            // Current depth of traversal
-  int array_index;      // Index in an array
+  int d1;               // Current depth of traversal
+  int d2;               // Expected depth of traversal
+  int i1;               // Index in an array
+  int i2;               // Expected index in an array
   int obj;              // If the value is array/object, offset where it starts
   const char **tokptr;  // Destination
   int *toklen;          // Destination length
   int tok;              // Returned token
 };
 
-static void mjson_find_cb(int ev, const char *s, int off, int len, void *ud) {
+static void mjson_find_cb(int tok, const char *s, int off, int len, void *ud) {
   struct msjon_find_data *data = (struct msjon_find_data *) ud;
-  printf("--> %2x %2d %2d\t%s\t[%.*s]\t\t[%.*s]\n", ev, data->depth,
-         data->array_index, data->path + data->pos, off, s, len, s + off);
-  if (data->tok != MJSON_TOK_INVALID) {
-    return;
-  } else if (ev == '{') {
-    if (data->path[data->pos] == '.') {
-      data->pos++;
-    } else {
-      if (data->path[data->pos] == '\0' && data->depth == 0) data->obj = off;
-      data->depth++;
+  // printf("--> %2x %2d %2d %2d %2d\t'%s'\t'%.*s'\t\t'%.*s'\n", tok, data->d1,
+  //        data->d2, data->i1, data->i2, data->path + data->pos, off, s, len,
+  //        s + off);
+  if (data->tok != MJSON_TOK_INVALID) return;  // Found
+
+  if (tok == '{') {
+    if (!data->path[data->pos] && data->d1 == data->d2) data->obj = off;
+    data->d1++;
+  } else if (tok == '[') {
+    if (data->d1 == data->d2 && data->path[data->pos] == '[') {
+      data->i1 = 0;
+      data->i2 = strtod(&data->path[data->pos + 1], NULL);
+      if (data->i1 == data->i2) {
+        data->d2++;
+        data->pos += 3;
+      }
     }
-  } else if (ev == ',') {
-    data->array_index++;
-  } else if (ev == '[') {
-    data->array_index = 0;
-    if (data->path[data->pos] == '\0' && data->depth == 0) data->obj = off;
-    data->depth++;
-  } else if (ev == MJSON_TOK_KEY && data->depth == 0 &&
-             !memcmp(s + off + 1, &data->path[data->pos], len - 2)) {
-    data->pos += len - 2;
-  } else if (ev == '}' || ev == ']') {
-    data->depth--;
-    if (data->path[data->pos] == '\0' && data->depth == 0 && data->obj != -1) {
-      data->tok = s[off] - 2;
+    if (!data->path[data->pos] && data->d1 == data->d2) data->obj = off;
+    data->d1++;
+  } else if (tok == ',') {
+    if (data->d1 == data->d2 + 1) {
+      data->i1++;
+      if (data->i1 == data->i2) {
+        while (data->path[data->pos] != ']') data->pos++;
+        data->pos++;
+        data->d2++;
+      }
+    }
+  } else if (tok == MJSON_TOK_KEY && data->d1 == data->d2 + 1 &&
+             data->path[data->pos] == '.' &&
+             !memcmp(s + off + 1, &data->path[data->pos + 1], len - 2)) {
+    data->d2++;
+    data->pos += len - 1;
+  } else if (tok == '}' || tok == ']') {
+    data->d1--;
+    if (!data->path[data->pos] && data->d1 == data->d2 && data->obj != -1) {
+      data->tok = tok - 2;
       if (data->tokptr) *data->tokptr = s + data->obj;
       if (data->toklen) *data->toklen = off - data->obj + 1;
     }
-  } else if (ev & MJSON_TOK_VALUE) {
-    char *end = NULL;
-    int grab = 0;
-    if (data->path[data->pos] == '[' && data->depth == 1 &&
-        data->array_index == strtod(&data->path[data->pos + 1], &end) &&
-        end != NULL && data->path[end - data->path] == ']' &&
-        data->path[end - data->path + 1] == '\0') {
-      grab++;
-    }
-    if (data->depth == 0 && data->path[data->pos] == '\0') grab++;
-    if (grab) {
-      data->tok = ev;
+  } else if (MJSON_TOK_IS_VALUE(tok)) {
+    // printf("TOK --> %d\n", tok);
+    if (data->d1 == data->d2 && !data->path[data->pos]) {
+      data->tok = tok;
       if (data->tokptr) *data->tokptr = s + off;
       if (data->toklen) *data->toklen = len;
     }
   }
 }
 
-enum mjson_tok mjson_find(const char *s, int len, const char *path,
+enum mjson_tok mjson_find(const char *s, int len, const char *jp,
                           const char **tokptr, int *toklen) {
-  struct msjon_find_data data = {path, 1,      0,      0,
-                                 -1,   tokptr, toklen, MJSON_TOK_INVALID};
-  if (path[0] != '$') return MJSON_TOK_INVALID;
+  struct msjon_find_data data = {jp, 1,  0,      0,      0,
+                                 0,  -1, tokptr, toklen, MJSON_TOK_INVALID};
+  if (jp[0] != '$') return MJSON_TOK_INVALID;
   if (mjson(s, len, mjson_find_cb, &data) < 0) return MJSON_TOK_INVALID;
   return data.tok;
 }

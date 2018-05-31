@@ -37,7 +37,7 @@ int mjson(const char *s, int len, mjson_cb_t cb, void *cbdata);
 enum mjson_tok mjson_find(const char *s, int len, const char *path,
                           const char **tokptr, int *toklen);
 
-double mjson_find_number(const char *s, int len, const char *path, double def);
-int mjson_find_bool(const char *s, int len, const char *path, int def);
-int mjson_find_string(const char *s, int len, const char *path, char *to, int);
+double mjson_find_number(const char *s, int len, const char *path, double default_val);
+int mjson_find_bool(const char *s, int len, const char *path, int default_val);
+int mjson_find_string(const char *s, int len, const char *path, char *to, int sz);
 ```

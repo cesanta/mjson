@@ -91,6 +91,30 @@ static void test_find_number(void) {
     const char *s = "{\"a1\":[1,2,{\"a2\":4},[],{}],\"a\":3}";
     assert(mjson_find_number(s, strlen(s), "$.a", 0) == 3);
   }
+  {
+    const char *s = "[1,{\"a\":2}]";
+    assert(mjson_find_number(s, strlen(s), "$[0]", 0) == 1);
+    assert(mjson_find_number(s, strlen(s), "$[1].a", 0) == 2);
+  }
+  assert(mjson_find_number("[[2,1]]", 7, "$[0][1]", 42) == 1);
+  assert(mjson_find_number("[[2,1]]", 7, "$[0][0]", 42) == 2);
+  assert(mjson_find_number("[[2,[]]]", 8, "$[0][0]", 42) == 2);
+  assert(mjson_find_number("[1,[2,[]]]", 10, "$[1][0]", 42) == 2);
+  assert(mjson_find_number("[{},1]", 6, "$[1]", 42) == 1);
+  assert(mjson_find_number("[[],1]", 6, "$[1]", 42) == 1);
+  assert(mjson_find_number("[1,[2,[],3,[4,5]]]", 18, "$[0]", 42) == 1);
+  assert(mjson_find_number("[1,[2,[],3,[4,5]]]", 18, "$[1]", 42) == 42);
+  assert(mjson_find_number("[1,[2,[],3,[4,5]]]", 18, "$[1][0]", 42) == 2);
+  assert(mjson_find_number("[1,[2,[],3,[4,5]]]", 18, "$[1][2]", 42) == 3);
+  assert(mjson_find_number("[1,[2,[],3,[4,5]]]", 18, "$[1][3][0]", 42) == 4);
+  assert(mjson_find_number("[1,[2,[],3,[4,5]]]", 18, "$[1][3][1]", 42) == 5);
+  assert(mjson_find_number("[1,[2,[],3,[4,5]]]", 18, "$[1][3][2]", 42) == 42);
+  assert(mjson_find_number("[1,[2,[],3,[4,5]]]", 18, "$[1][3][2][0]", 3) == 3);
+
+  assert(mjson_find_number("[1,2,{\"a\":[3,4]}]", 17, "$[1]", 3) == 2);
+  assert(mjson_find_number("[1,2,{\"a\":[3,4]}]", 17, "$[2].a[0]", 11) == 3);
+  assert(mjson_find_number("[1,2,{\"a\":[3,4]}]", 17, "$[2].a[1]", 11) == 4);
+  assert(mjson_find_number("[1,2,{\"a\":[3,4]}]", 17, "$[2].a[2]", 11) == 11);
 }
 
 static void test_find_bool(void) {
