@@ -43,3 +43,7 @@ double mjson_find_number(const char *s, int len, const char *path, double defaul
 int mjson_find_bool(const char *s, int len, const char *path, int default_val);
 int mjson_find_string(const char *s, int len, const char *path, char *to, int sz);
 ```
+
+# License
+
+[MIT](https://en.wikipedia.org/wiki/MIT_License)
