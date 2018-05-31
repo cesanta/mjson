@@ -2,6 +2,8 @@
 
 Minimalistic JSON parser and emitter for embedded systems
 
+[![Build Status](https://travis-ci.org/cpq/mjson.svg?branch=master)](https://travis-ci.org/cpq/mjson)
+
 ## Features
 
 - Tiny footprint, single-header ISO C / ISO C++ library
