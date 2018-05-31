@@ -11,7 +11,7 @@ Minimalistic JSON parser and emitter for embedded systems
 - Tiny footprint, single-header ISO C / ISO C++ library
 - State machine based parser, no allocations, no recursion
 - Low level SAX API
-- High level value fetching API - get values by their
+- High level API - fetch from JSON directly into C/C++ by
     [jsonpath](https://github.com/json-path/JsonPath)
 - Dependencies: `memcmp()`, `strtod()`, `strchr()`
 - MIT license
