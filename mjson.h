@@ -218,7 +218,7 @@ enum mjson_tok mjson_find(const char *s, int len, const char *jp,
                                  0,  -1, tokptr, toklen, MJSON_TOK_INVALID};
   if (jp[0] != '$') return MJSON_TOK_INVALID;
   if (mjson(s, len, mjson_find_cb, &data) < 0) return MJSON_TOK_INVALID;
-  return data.tok;
+  return (enum mjson_tok) data.tok;
 }
 
 double mjson_find_number(const char *s, int len, const char *path, double def) {
