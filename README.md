@@ -13,6 +13,7 @@ Minimalistic JSON parser and emitter for embedded systems
 - Low level SAX API
 - High level value fetching API - get values by their
     [jsonpath](https://github.com/json-path/JsonPath)
+- Dependencies: `memcmp()`, `strtod()`, `strchr()`
 - MIT license
 
 ## Example: parse JSON-RPC frame
