@@ -12,7 +12,8 @@ Minimalistic JSON parser and emitter for embedded systems
 - State machine based parser, no allocations, no recursion
 - Low level SAX API
 - High level value fetching API - get values by their
-    [jsonpath](https://github.com/json-path/JsonPath) 
+    [jsonpath](https://github.com/json-path/JsonPath)
+- MIT license
 
 ## Example: parse JSON-RPC frame
 
@@ -45,7 +46,3 @@ double mjson_find_number(const char *s, int len, const char *path, double defaul
 int mjson_find_bool(const char *s, int len, const char *path, int default_val);
 int mjson_find_string(const char *s, int len, const char *path, char *to, int sz);
 ```
-
-# License
-
-[MIT](https://en.wikipedia.org/wiki/MIT_License)
