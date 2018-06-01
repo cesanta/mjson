@@ -60,8 +60,8 @@ The following example prints `{"a":123}` into a fixed size buffer:
 ```c
 char buf[100];
 struct mjson_fixed_buf fb = {tmp, sizeof(tmp), 0};
-mjson_print_buf("{", 1, mjson_fixed_buf_printer, &fb)
-mjson_print_str("a", 1, mjson_fixed_buf_printer, &fb)
-mjson_print_int(123, mjson_fixed_buf_printer, &fb)
-mjson_print_buf("}", 1, mjson_fixed_buf_printer, &fb)
+mjson_print_buf("{", 1, mjson_fixed_buf_printer, &fb);
+mjson_print_str("a", 1, mjson_fixed_buf_printer, &fb);
+mjson_print_int(123, mjson_fixed_buf_printer, &fb);
+mjson_print_buf("}", 1, mjson_fixed_buf_printer, &fb);
 ```
