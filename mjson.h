@@ -46,9 +46,15 @@ typedef void (*mjson_cb_t)(int ev, const char *s, int off, int len, void *ud);
 #define MJSON_MAX_DEPTH 20
 #endif
 
+static int mjson_esc(int c, int esc) {
+  const char *esc1 = "\b\f\n\r\t\\\"/", *esc2 = "bfnrt\\\"/";
+  const char *p = strchr(esc ? esc1 : esc2, c);
+  return !p ? 0 : esc ? esc2[p - esc1] : esc1[p - esc2];
+}
+
 static int mjson_pass_string(const char *s, int len) {
   for (int i = 0; i < len; i++) {
-    if (s[i] == '\\' && i + 1 < len && strchr("\b\f\n\r\t\\\"/", s[i + 1])) {
+    if (s[i] == '\\' && i + 1 < len && mjson_esc(s[i + 1], 1)) {
       i++;
     } else if (s[i] == '\0') {
       return MJSON_ERROR_INVALID_INPUT;
@@ -260,10 +266,9 @@ static int mjson_unescape(const char *s, int len, char *to, int n) {
   int i, j;
   for (i = 0, j = 0; i < len && j < n; i++, j++) {
     if (s[i] == '\\' && i + 1 < len) {
-      const char *esc1 = "bfnrt\\\"/";
-      const char *esc2 = "\b\f\n\r\t\\\"/";
-      const char *p = strchr(esc1, s[i + 1]);
-      if (p != NULL) to[j] = esc2[p - esc1];
+      int c = mjson_esc(s[i + 1], 0);
+      if (c == 0) return -1;
+      to[j] = c;
       i++;
     } else {
       to[j] = s[i];
@@ -280,4 +285,47 @@ int mjson_find_string(const char *s, int len, const char *path, char *to,
   int sz;
   if (mjson_find(s, len, path, &p, &sz) != MJSON_TOK_STRING) return 0;
   return mjson_unescape(p + 1, sz - 2, to, n);
+}
+
+typedef int (*mjson_print_fn_t)(const char *, int, void *userdata);
+
+struct mjson_fixed_buf {
+  void *ptr;
+  int size;
+  int len;
+};
+
+int mjson_fixed_buf_printer(const char *ptr, int len, void *ud) {
+  struct mjson_fixed_buf *fb = (struct mjson_fixed_buf *) ud;
+  if (len > fb->size - fb->len) len = fb->size - fb->len;
+  for (int i = 0; i < len; i++) ((char *) fb->ptr)[fb->len + i] = ptr[i];
+  fb->len += len;
+  return len;
+}
+
+int mjson_print_buf(const char *buf, int len, mjson_print_fn_t fn, void *ud) {
+  return fn(buf, len, ud);
+}
+
+int mjson_print_int(int n, mjson_print_fn_t fn, void *ud) {
+  if (n < 0) {
+    fn("-", 1, ud);
+    return mjson_print_int(-n, fn, ud) + 1;
+  }
+  int len = n > 10 ? mjson_print_int(n / 10, fn, ud) : 0;
+  return len + fn(&("0123456789"[n % 10]), 1, ud);
+}
+
+int mjson_print_str(const char *s, int len, mjson_print_fn_t fn, void *ud) {
+  int n = fn("\"", 1, ud);
+  for (int i = 0; i < len; i++) {
+    char c = mjson_esc(s[i], 1);
+    if (c) {
+      n += fn("\\", 1, ud);
+      n += fn(&c, 1, ud);
+    } else {
+      n += fn(&s[i], 1, ud);
+    }
+  }
+  return n + fn("\"", 1, ud);
 }

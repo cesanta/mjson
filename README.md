@@ -35,7 +35,7 @@ if (mjson_find(buf, len, "$.params", &p, &n) != MJSON_TOK_INVALID) {
 }
 ```
 
-# API reference
+# Parsing API
 
 ```c
 int mjson(const char *s, int len, mjson_cb_t cb, void *cbdata);
@@ -46,4 +46,22 @@ enum mjson_tok mjson_find(const char *s, int len, const char *path,
 double mjson_find_number(const char *s, int len, const char *path, double default_val);
 int mjson_find_bool(const char *s, int len, const char *path, int default_val);
 int mjson_find_string(const char *s, int len, const char *path, char *to, int sz);
+```
+
+# Emitting API
+
+The emitting API uses "printer function" that accepts a buffer to output,
+and an arbitrary pointer. It can print JSON to any destination - network
+socket, file, auto-resizable memory region, etc. mjson implements
+a printer function to a fixed size buffer.
+
+The following example prints `{"a":123}` into a fixed size buffer:
+
+```c
+char buf[100];
+struct mjson_fixed_buf fb = {tmp, sizeof(tmp), 0};
+mjson_print_buf("{", 1, mjson_fixed_buf_printer, &fb)
+mjson_print_str("a", 1, mjson_fixed_buf_printer, &fb)
+mjson_print_int(123, mjson_fixed_buf_printer, &fb)
+mjson_print_buf("}", 1, mjson_fixed_buf_printer, &fb)
 ```
