@@ -19,19 +19,19 @@ Minimalistic JSON parser and emitter for embedded systems
 ## Example: parse JSON-RPC frame
 
 ```c
-const char *p;
-int n;
+const char *p;  // Pointer to the found element 
+int n;          // Element length
 
 if (mjson_find(buf, len, "$.id", &p, &n) != MJSON_TOK_INVALID) {
-  printf("FRAME ID: [%.*s]\n", n, p);
+  printf("FRAME ID: [%.*s]\n", n, p);  // ID could be of any type
 }
 
 if (mjson_find(buf, len, "$.method", &p, &n) == MJSON_TOK_STRING) {
-  printf("FRAME METHOD: [%.*s]\n", n, p);
+  printf("FRAME METHOD: [%.*s]\n", n, p);  // Method must be a string
 }
 
 if (mjson_find(buf, len, "$.params", &p, &n) != MJSON_TOK_INVALID) {
-  printf("FRAME PARAMS: [%.*s]\n", n, p);
+  printf("FRAME PARAMS: [%.*s]\n", n, p);  // Params may be missing
 }
 ```
 
