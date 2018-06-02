@@ -18,18 +18,40 @@ Minimalistic JSON parser and emitter for embedded systems
 
 # Parsing API
 
-```c
-// Parse JSON string `s, len`, calling callback `cb` for each token
-int mjson(const char *s, int len, mjson_cb_t cb, void *cbdata);
+## `mjson`
 
-// Find an element by its JSONPATH. Save found element in tokptr, toklen.
-// Example: s, len is a JSON string: {"foo": { "bar": [ 1, 2, 3] }, "baz": true} 
-// assert(mjson_find(s, len, "$.foo.bar[1]", &p, &n) == MJSON_TOK_NUMBER);
-// assert(mjson_find(s, len, "$.baz", &p, &n) == MJSON_TOK_TRUE);
-// assert(mjson_find(s, len, "$", &p, &n) == MJSON_TOK_OBJECT);
+```c
+int mjson(const char *s, int len, mjson_cb_t cb, void *cbdata);
+```
+
+Parse JSON string `s`, `len`, calling callback `cb` for each token.
+
+
+## `mjson_find`
+
+```c
 enum mjson_tok mjson_find(const char *s, int len, const char *path,
                           const char **tokptr, int *toklen);
+```
 
+In a JSON string `s`, `len`, find an element by its JSONPATH `path`.
+Save found element in `tokptr`, `toklen`.
+If not found, return `JSON_TOK_INVALID`. If found, return one of:
+`MJSON_TOK_STRING`, `MJSON_TOK_NUMBER`, `MJSON_TOK_TRUE`, `MJSON_TOK_FALSE`,
+`MJSON_TOK_NULL`, `MJSON_TOK_ARRAY`, `MJSON_TOK_OBJECT`. Example:
+
+```c
+// s, len is a JSON string: {"foo": { "bar": [ 1, 2, 3] }, "baz": true} 
+char *p;
+int n;
+assert(mjson_find(s, len, "$.foo.bar[1]", &p, &n) == MJSON_TOK_NUMBER);
+assert(mjson_find(s, len, "$.baz", &p, &n) == MJSON_TOK_TRUE);
+assert(mjson_find(s, len, "$", &p, &n) == MJSON_TOK_OBJECT);
+```
+
+## `mjson_find_number`
+
+```c
 // Find a number by its JSONPATH. If not found, return `default_val`.
 // assert(mjson_find_number(s, len, "$.foo.bar[1]", 0) == 2);
 double mjson_find_number(const char *s, int len, const char *path, double default_val);
