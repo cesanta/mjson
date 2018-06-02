@@ -18,7 +18,7 @@ Minimalistic JSON parser and emitter for embedded systems
 
 # Parsing API
 
-## `mjson`
+## mjson
 
 ```c
 int mjson(const char *s, int len, mjson_cb_t cb, void *cbdata);
@@ -27,7 +27,7 @@ int mjson(const char *s, int len, mjson_cb_t cb, void *cbdata);
 Parse JSON string `s`, `len`, calling callback `cb` for each token.
 
 
-## `mjson_find`
+## mjson_find
 
 ```c
 enum mjson_tok mjson_find(const char *s, int len, const char *path,
