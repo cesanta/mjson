@@ -47,7 +47,7 @@ double mjson_find_number(const char *s, int len, const char *path, double defaul
 ```
 
 In a JSON string `s`, `len`, return a number value by its JSONPATH `path`.
-If not found, return `default_val`. Exameple:
+If not found, return `default_val`. Example:
 
 ```c
 // s, len is a JSON string: {"foo": { "bar": [ 1, 2, 3] }, "baz": true} 
