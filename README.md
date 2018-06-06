@@ -18,7 +18,7 @@ Minimalistic JSON parser and emitter for embedded systems
 
 # Parsing API
 
-## mjson_find
+## mjson_find()
 
 ```c
 enum mjson_tok mjson_find(const char *s, int len, const char *path,
@@ -40,7 +40,7 @@ assert(mjson_find(s, len, "$.baz", &p, &n) == MJSON_TOK_TRUE);
 assert(mjson_find(s, len, "$", &p, &n) == MJSON_TOK_OBJECT);
 ```
 
-## mjson_find_number
+## mjson_find_number()
 
 ```c
 double mjson_find_number(const char *s, int len, const char *path, double default_val);
@@ -54,7 +54,7 @@ If not found, return `default_val`. Exameple:
 double v = mjson_find_number(s, len, "$.foo.bar[1]", 0);  // Assigns to 2
 ```
 
-## mjson_find_bool
+## mjson_find_bool()
 
 ```c
 int mjson_find_bool(const char *s, int len, const char *path, int default_val);
@@ -68,7 +68,7 @@ If not found, return `default_val`. Example:
 bool v = mjson_find_bool(s, len, "$.baz", false);   // Assigns to true
 ```
 
-## mjson_find_string
+## mjson_find_string()
 
 ```c
 int mjson_find_string(const char *s, int len, const char *path, char *to, int sz);
@@ -83,7 +83,7 @@ char buf[100];
 int n = mjson_find_string(s, len, "$[1]", buf, sizeof(buf));  // Assigns to 4
 ```
 
-## mjson
+## mjson()
 
 ```c
 int mjson(const char *s, int len, mjson_cb_t cb, void *cbdata);
