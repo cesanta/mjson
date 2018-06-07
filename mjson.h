@@ -287,6 +287,8 @@ int mjson_find_string(const char *s, int len, const char *path, char *to,
   return mjson_unescape(p + 1, sz - 2, to, n);
 }
 
+typedef int (*mjson_print_fn_t)(const char *buf, int len, void *fn_data);
+
 struct mjson_fixed_buf {
   void *ptr;
   int size;
@@ -294,7 +296,7 @@ struct mjson_fixed_buf {
 };
 
 struct mjson_out {
-  int (*print_function)(const char *buf, int len, void *userdata);
+  mjson_print_fn_t print_function;
   void *print_function_data;
 };
 
