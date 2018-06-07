@@ -287,12 +287,15 @@ int mjson_find_string(const char *s, int len, const char *path, char *to,
   return mjson_unescape(p + 1, sz - 2, to, n);
 }
 
-typedef int (*mjson_print_fn_t)(const char *, int, void *userdata);
-
 struct mjson_fixed_buf {
   void *ptr;
   int size;
   int len;
+};
+
+struct mjson_out {
+  int (*print_function)(const char *buf, int len, void *userdata);
+  void *print_function_data;
 };
 
 int mjson_fixed_buf_printer(const char *ptr, int len, void *ud) {
@@ -303,29 +306,30 @@ int mjson_fixed_buf_printer(const char *ptr, int len, void *ud) {
   return len;
 }
 
-int mjson_print_buf(const char *buf, int len, mjson_print_fn_t fn, void *ud) {
-  return fn(buf, len, ud);
+int mjson_print_buf(struct mjson_out *out, const char *buf, int len) {
+  return out->print_function(buf, len, out->print_function_data);
 }
 
-int mjson_print_int(int n, mjson_print_fn_t fn, void *ud) {
+int mjson_print_int(struct mjson_out *out, int n) {
   if (n < 0) {
-    fn("-", 1, ud);
-    return mjson_print_int(-n, fn, ud) + 1;
+    out->print_function("-", 1, out->print_function_data);
+    return mjson_print_int(out, -n) + 1;
   }
-  int len = n > 10 ? mjson_print_int(n / 10, fn, ud) : 0;
-  return len + fn(&("0123456789"[n % 10]), 1, ud);
+  int len = n > 10 ? mjson_print_int(out, n / 10) : 0;
+  return len + out->print_function(&("0123456789"[n % 10]), 1,
+                                   out->print_function_data);
 }
 
-int mjson_print_str(const char *s, int len, mjson_print_fn_t fn, void *ud) {
-  int n = fn("\"", 1, ud);
+int mjson_print_str(struct mjson_out *out, const char *s, int len) {
+  int n = out->print_function("\"", 1, out->print_function_data);
   for (int i = 0; i < len; i++) {
     char c = mjson_esc(s[i], 1);
     if (c) {
-      n += fn("\\", 1, ud);
-      n += fn(&c, 1, ud);
+      n += out->print_function("\\", 1, out->print_function_data);
+      n += out->print_function(&c, 1, out->print_function_data);
     } else {
-      n += fn(&s[i], 1, ud);
+      n += out->print_function(&s[i], 1, out->print_function_data);
     }
   }
-  return n + fn("\"", 1, ud);
+  return n + out->print_function("\"", 1, out->print_function_data);
 }

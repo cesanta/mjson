@@ -104,11 +104,12 @@ mjson implements a printer function to a fixed size buffer, called
 The following example prints `{"a":123}` into a fixed size buffer:
 
 ```c
-char buf[100];                                      // This is a fixed size buffer
-struct mjson_fixed_buf fb = {tmp, sizeof(tmp), 0};  // A struct that describes it
+char buf[100];  // Fixed size buffer
+struct mjson_fixed_buf fb = {tmp, sizeof(tmp), 0};     // Buffer descriptor
+struct mjson_out out = {mjson_fixed_buf_printer, &fb};  // Printer descriptor
 
-mjson_print_buf("{", 1, mjson_fixed_buf_printer, &fb);
-mjson_print_str("a", 1, mjson_fixed_buf_printer, &fb);
-mjson_print_int(123, mjson_fixed_buf_printer, &fb);
-mjson_print_buf("}", 1, mjson_fixed_buf_printer, &fb);
+mjson_print_buf(&out, "{", 1);
+mjson_print_str(&out, "a", 1);
+mjson_print_int(&out, 123);
+mjson_print_buf(&out, "}", 1);
 ```
