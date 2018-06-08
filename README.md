@@ -1,12 +1,10 @@
-# mjson
-
-Minimalistic JSON parser and emitter for embedded systems
+# mjson - a JSON parser and emitter for embedded systems
 
 [![Build Status](https://travis-ci.org/cpq/mjson.svg?branch=master)](https://travis-ci.org/cpq/mjson)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](https://opensource.org/licenses/MIT)
 
 
-## Features
+# Features
 
 - Tiny footprint, single-header ISO C / ISO C++ library
 - State machine based parser, no allocations, no recursion
