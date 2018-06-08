@@ -144,8 +144,9 @@ Print using `printf()`-like format string. Supported specifiers are:
 - `%B` print `true` or `false`. Expect `int`
 - `%M` print using custom print function. Expect `int (*)(struct mjson_out *, va_list *)`
 
-The following example produces `{"a":1, "b":[1234]}` into an allocated
-string `s`. Note that the array is printed using a custom printer function:
+The following example produces `{"a":1, "b":[1234]}` into the
+dynamically-growing string `s`.
+Note that the array is printed using a custom printer function:
 
 ```c
 static int custom_printer(struct mjson_out *out, va_list *ap) {
