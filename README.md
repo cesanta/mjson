@@ -107,6 +107,12 @@ are:
   `char *buf = NULL; struct mjson_out = MJSON_OUT_DYNAMIC_BUF(&buf);`
 - File. `FILE *fp; ... struct mjson_out = MJSON_OUT_FILE(fp);`
 
+It is trivial to make your own descriptor, e.g.:
+
+```c
+struct mjson_out out = {my_socket_printer, {(char *) sock, 0, 0, 0}};
+```
+
 ## mjson_print_buf(), mjson_print_str(), mjson_print_int()
 
 
