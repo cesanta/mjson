@@ -146,4 +146,6 @@ static int custom_printer(struct mjson_out *out, va_list *ap) {
 char *s = NULL;
 struct mjson_out out = MJSON_OUT_DYNAMIC_BUF(&s);
 mjson_printf(&out, "{%Q:%d, %Q:%M}", "a", 1, "b", custom_printer, 1234);
+/* At this point `s` contains: {"a":1, "b":[1234]}  */
+free(s);
 ```
