@@ -124,7 +124,12 @@ mjson_print_buf(&out, "}", 1);
 
 ## msjon_printf()
 
-Print using `printf()`-like format specifier. Supported specifiers are:
+```c
+int mjson_vprintf(struct mjson_out *out, const char *fmt, va_list ap);
+int mjson_printf(struct mjson_out *out, const char *fmt, ...);
+```
+
+Print using `printf()`-like format string. Supported specifiers are:
 
 - `%Q` print quoted escaped string. Expect NUL-terminated `char *`
 - `%s` print string as is. Expect NUL-terminated `char *`
