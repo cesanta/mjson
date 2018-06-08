@@ -95,21 +95,55 @@ is a low-level SAX API, intended for fancy stuff like pretty printing, etc.
 
 # Emitting API
 
-The emitting API uses "printer function" that accepts a buffer to output,
-and an arbitrary pointer. It can print JSON to any destination - network
-socket, file, auto-resizable memory region, etc.
 
-mjson implements a printer function to a fixed size buffer, called
-`mjson_fixed_buf_printer()` which works with `struct mjson_fixed_buf`.
+The emitting API uses `struct mjson_out` descriptor that specifies printer
+function and associated data. It can print JSON to any destination - network
+socket, file, auto-resizable memory region, etc. Builtin descriptors
+are:
+
+- Fixed buffer. Prints into a fixed buffer area until overflow.
+  `char buf[100]; struct mjson_out = MJSON_OUT_FIXED_BUF(buf, sizeof(buf));`
+- Dynamic buffer. Must be initialised to NULL, then grows using `realloc()`.
+  `char *buf = NULL; struct mjson_out = MJSON_OUT_DYNAMIC_BUF(&buf);`
+- File. `FILE *fp; ... struct mjson_out = MJSON_OUT_FILE(fp);`
+
+## mjson_print_buf(), mjson_print_str(), mjson_print_int()
+
+
 The following example prints `{"a":123}` into a fixed size buffer:
 
 ```c
-char buf[100];  // Fixed size buffer
-struct mjson_fixed_buf fb = {tmp, sizeof(tmp), 0};     // Buffer descriptor
-struct mjson_out out = {mjson_fixed_buf_printer, &fb};  // Printer descriptor
+char buf[100];
+struct mjson_out = MJSON_OUT_FIXED_BUF(buf, sizeof(buf));
 
 mjson_print_buf(&out, "{", 1);
 mjson_print_str(&out, "a", 1);
 mjson_print_int(&out, 123);
 mjson_print_buf(&out, "}", 1);
+```
+
+## msjon_printf()
+
+Print using `printf()`-like format specifier. Supported specifiers are:
+
+- `%Q` print quoted escaped string. Expect NUL-terminated `char *`
+- `%s` print string as is. Expect NUL-terminated `char *`
+- `%f` print floating point number. Expect `double`
+- `%d` print integer number. Expect `int`
+- `%B` print `true` or `false`. Expect `int`
+- `%M` print using custom print function. Expect `int (*)(struct mjson_out *, va_list *)`
+
+The following example produces `{"a":1, "b":[1234]}` into an allocated
+string `s`. Note that the array is printed using a custom printer function:
+
+```c
+static int custom_printer(struct mjson_out *out, va_list *ap) {
+  int value = va_arg(*ap, int);
+  return mjson_printf(out, "[%d]", value);
+}
+
+...
+char *s = NULL;
+struct mjson_out out = MJSON_OUT_DYNAMIC_BUF(&s);
+mjson_printf(&out, "{%Q:%d, %Q:%M}", "a", 1, "b", custom_printer, 1234);
 ```

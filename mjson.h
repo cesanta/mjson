@@ -19,6 +19,8 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
+#include <stdarg.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -287,51 +289,134 @@ int mjson_find_string(const char *s, int len, const char *path, char *to,
   return mjson_unescape(p + 1, sz - 2, to, n);
 }
 
-typedef int (*mjson_print_fn_t)(const char *buf, int len, void *fn_data);
-
-struct mjson_fixed_buf {
-  void *ptr;
-  int size;
-  int len;
-};
-
 struct mjson_out {
-  mjson_print_fn_t print_function;
-  void *print_function_data;
+  int (*print)(struct mjson_out *, const char *buf, int len);
+  union {
+    struct {
+      char *ptr;
+      int size, len, overflow;
+    } fixed_buf;
+    char **dynamic_buf;
+    FILE *fp;
+  } u;
 };
 
-int mjson_fixed_buf_printer(const char *ptr, int len, void *ud) {
-  struct mjson_fixed_buf *fb = (struct mjson_fixed_buf *) ud;
-  if (len > fb->size - fb->len) len = fb->size - fb->len;
-  for (int i = 0; i < len; i++) ((char *) fb->ptr)[fb->len + i] = ptr[i];
-  fb->len += len;
+#define MJSON_OUT_FIXED_BUF(buf, buflen) \
+  {                                      \
+    mjson_print_fixed_buf, {             \
+      { (buf), (buflen), 0, 0 }          \
+    }                                    \
+  }
+
+#define MJSON_OUT_DYNAMIC_BUF(buf) \
+  {                                \
+    mjson_print_dynamic_buf, {     \
+      { (char *) (buf), 0, 0, 0 }  \
+    }                              \
+  }
+
+#define MJSON_OUT_FILE(fp)       \
+  {                              \
+    mjson_print_file, {          \
+      { (char *) (fp), 0, 0, 0 } \
+    }                            \
+  }
+
+int mjson_print_fixed_buf(struct mjson_out *out, const char *ptr, int len) {
+  int left = out->u.fixed_buf.size - out->u.fixed_buf.len;
+  if (left < len) {
+    out->u.fixed_buf.overflow = 1;
+    len = left;
+  }
+  for (int i = 0; i < len; i++) {
+    out->u.fixed_buf.ptr[out->u.fixed_buf.len + i] = ptr[i];
+  }
+  out->u.fixed_buf.len += len;
   return len;
 }
 
+int mjson_print_dynamic_buf(struct mjson_out *out, const char *ptr, int len) {
+  char *s, *buf = *out->u.dynamic_buf;
+  int curlen = buf == NULL ? 0 : strlen(buf);
+  if ((s = (char *) realloc(buf, curlen + len + 1)) == NULL) {
+    return 0;
+  } else {
+    memcpy(s + curlen, ptr, len);
+    s[curlen + len] = '\0';
+    *out->u.dynamic_buf = s;
+    return len;
+  }
+}
+
+int mjson_print_file(struct mjson_out *out, const char *ptr, int len) {
+  return fwrite(ptr, 1, len, out->u.fp);
+}
+
 int mjson_print_buf(struct mjson_out *out, const char *buf, int len) {
-  return out->print_function(buf, len, out->print_function_data);
+  return out->print(out, buf, len);
 }
 
 int mjson_print_int(struct mjson_out *out, int n) {
   if (n < 0) {
-    out->print_function("-", 1, out->print_function_data);
+    out->print(out, "-", 1);
     return mjson_print_int(out, -n) + 1;
   }
   int len = n > 10 ? mjson_print_int(out, n / 10) : 0;
-  return len + out->print_function(&("0123456789"[n % 10]), 1,
-                                   out->print_function_data);
+  return len + out->print(out, &("0123456789"[n % 10]), 1);
 }
 
-int mjson_print_str(struct mjson_out *out, const char *s, int len) {
-  int n = out->print_function("\"", 1, out->print_function_data);
-  for (int i = 0; i < len; i++) {
+int mjson_print_str(struct mjson_out *out, const char *s) {
+  int n = out->print(out, "\"", 1);
+  for (int i = 0; s[i] != '\0'; i++) {
     char c = mjson_esc(s[i], 1);
     if (c) {
-      n += out->print_function("\\", 1, out->print_function_data);
-      n += out->print_function(&c, 1, out->print_function_data);
+      n += out->print(out, "\\", 1);
+      n += out->print(out, &c, 1);
     } else {
-      n += out->print_function(&s[i], 1, out->print_function_data);
+      n += out->print(out, &s[i], 1);
     }
   }
-  return n + out->print_function("\"", 1, out->print_function_data);
+  return n + out->print(out, "\"", 1);
+}
+
+typedef int (*mjson_printf_fn_t)(struct mjson_out *, va_list *);
+
+int mjson_vprintf(struct mjson_out *out, const char *fmt, va_list ap) {
+  int len = 0;
+  for (int i = 0; fmt[i] != '\0'; i++) {
+    if (fmt[i] == '%') {
+      if (fmt[i + 1] == 'Q') {
+        len += mjson_print_str(out, va_arg(ap, char *));
+      } else if (fmt[i + 1] == 'd') {
+        len += mjson_print_int(out, va_arg(ap, int));
+      } else if (fmt[i + 1] == 'B') {
+        const char *s = va_arg(ap, int) ? "true" : "false";
+        len += mjson_print_buf(out, s, strlen(s));
+      } else if (fmt[i + 1] == 's') {
+        char *buf = va_arg(ap, char *);
+        len += mjson_print_buf(out, buf, strlen(buf));
+      } else if (fmt[i + 1] == 'f') {
+        char buf[40];
+        snprintf(buf, sizeof(buf), "%g", va_arg(ap, double));
+        len += mjson_print_buf(out, buf, strlen(buf));
+      } else if (fmt[i + 1] == 'M') {
+        va_list tmp;
+        va_copy(tmp, ap);
+        mjson_printf_fn_t fn = va_arg(tmp, mjson_printf_fn_t);
+        len += fn(out, &tmp);
+      }
+      i++;
+    } else {
+      len += mjson_print_buf(out, &fmt[i], 1);
+    }
+  }
+  return len;
+}
+
+int mjson_printf(struct mjson_out *out, const char *fmt, ...) {
+  va_list ap;
+  va_start(ap, fmt);
+  int len = mjson_vprintf(out, fmt, ap);
+  va_end(ap);
+  return len;
 }
