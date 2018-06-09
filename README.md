@@ -100,7 +100,10 @@ socket, file, auto-resizable memory region, etc. Builtin descriptors
 are:
 
 - Fixed buffer. Prints into a fixed buffer area until overflow.
-  `char buf[100]; struct mjson_out = MJSON_OUT_FIXED_BUF(buf, sizeof(buf));`
+  ```c
+  char buf[100];
+  struct mjson_out = MJSON_OUT_FIXED_BUF(buf, sizeof(buf));
+  ```
 - Dynamic buffer. Must be initialised to NULL, then grows using `realloc()`.
   `char *buf = NULL; struct mjson_out = MJSON_OUT_DYNAMIC_BUF(&buf);`
 - File. `FILE *fp; ... struct mjson_out = MJSON_OUT_FILE(fp);`
