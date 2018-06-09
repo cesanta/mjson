@@ -102,11 +102,18 @@ are:
 - Fixed buffer. Prints into a fixed buffer area until overflow.
   ```c
   char buf[100];
-  struct mjson_out = MJSON_OUT_FIXED_BUF(buf, sizeof(buf));
+  struct mjson_out out = MJSON_OUT_FIXED_BUF(buf, sizeof(buf));
   ```
-- Dynamic buffer. Must be initialised to NULL, then grows using `realloc()`.
-  `char *buf = NULL; struct mjson_out = MJSON_OUT_DYNAMIC_BUF(&buf);`
-- File. `FILE *fp; ... struct mjson_out = MJSON_OUT_FILE(fp);`
+- Dynamic buffer. Must be initialised to NULL, then grows using `realloc()`:
+  ```c
+  char *buf = NULL;
+  struct mjson_out out = MJSON_OUT_DYNAMIC_BUF(&buf);
+  ```
+- File.
+  ```c
+  FILE *fp = stdout;
+  struct mjson_out out = MJSON_OUT_FILE(fp);
+  ```
 
 It is trivial to make your own descriptor, e.g.:
 
