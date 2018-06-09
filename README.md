@@ -99,12 +99,15 @@ function and associated data. It can print JSON to any destination - network
 socket, file, auto-resizable memory region, etc. Builtin descriptors
 are:
 
-- Fixed buffer. Prints into a fixed buffer area until overflow:
+- Fixed buffer. Prints into a fixed buffer area until the buffer is filled.
+  When the buffer full, printing stops, i.e. the buffer is never overflown.
+  Check `out.u.buf.overflow` flag to check for the overflow:
   ```c
   char buf[100];
   struct mjson_out out = MJSON_OUT_FIXED_BUF(buf, sizeof(buf));
   ```
-- Dynamic buffer. Must be initialised to NULL, then grows using `realloc()`:
+- Dynamic buffer. Must be initialised to NULL, then grows using `realloc()`.
+  The caller must `free()` the allocated string `buf`:
   ```c
   char *buf = NULL;
   struct mjson_out out = MJSON_OUT_DYNAMIC_BUF(&buf);
