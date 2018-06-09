@@ -99,7 +99,7 @@ function and associated data. It can print JSON to any destination - network
 socket, file, auto-resizable memory region, etc. Builtin descriptors
 are:
 
-- Fixed buffer. Prints into a fixed buffer area until overflow.
+- Fixed buffer. Prints into a fixed buffer area until overflow:
   ```c
   char buf[100];
   struct mjson_out out = MJSON_OUT_FIXED_BUF(buf, sizeof(buf));
@@ -109,9 +109,9 @@ are:
   char *buf = NULL;
   struct mjson_out out = MJSON_OUT_DYNAMIC_BUF(&buf);
   ```
-- File.
+- File:
   ```c
-  FILE *fp = stdout;
+  FILE *fp = fopen("settings.json", "w");
   struct mjson_out out = MJSON_OUT_FILE(fp);
   ```
 
