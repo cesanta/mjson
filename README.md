@@ -115,7 +115,9 @@ are:
   struct mjson_out out = MJSON_OUT_FILE(fp);
   ```
 
-It is trivial to make your own descriptor, e.g.:
+It is trivial to make your own descriptor. Just define your own printing
+function that accepts `struct mjson_out *` and put your own custom data
+into the structure. For example, in order to print to a network socket:
 
 ```c
 struct mjson_out out = {my_socket_printer, {(char *) sock, 0, 0, 0}};
