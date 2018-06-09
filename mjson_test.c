@@ -242,6 +242,11 @@ static void test_printf(void) {
     assert(memcmp(s, "[\"ab\",true]", 11) == 0);
     free(s);
   }
+
+  {
+    struct mjson_out out = MJSON_OUT_FILE(stdout);
+    mjson_printf(&out, "{%Q:%Q}\n", "message", "well done, test passed");
+  }
 }
 
 int main() {
