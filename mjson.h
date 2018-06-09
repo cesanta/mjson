@@ -365,9 +365,9 @@ int mjson_print_int(struct mjson_out *out, int n) {
   return len + out->print(out, &("0123456789"[n % 10]), 1);
 }
 
-int mjson_print_str(struct mjson_out *out, const char *s) {
+int mjson_print_str(struct mjson_out *out, const char *s, int len) {
   int n = out->print(out, "\"", 1);
-  for (int i = 0; s[i] != '\0'; i++) {
+  for (int i = 0; i < len; i++) {
     char c = mjson_esc(s[i], 1);
     if (c) {
       n += out->print(out, "\\", 1);
@@ -386,7 +386,13 @@ int mjson_vprintf(struct mjson_out *out, const char *fmt, va_list ap) {
   for (int i = 0; fmt[i] != '\0'; i++) {
     if (fmt[i] == '%') {
       if (fmt[i + 1] == 'Q') {
-        len += mjson_print_str(out, va_arg(ap, char *));
+        char *buf = va_arg(ap, char *);
+        len += mjson_print_str(out, buf, strlen(buf));
+      } else if (memcmp(&fmt[i + 1], ".*Q", 3) == 0) {
+        int n = va_arg(ap, int);
+        char *buf = va_arg(ap, char *);
+        len += mjson_print_str(out, buf, n);
+        i += 2;
       } else if (fmt[i + 1] == 'd') {
         len += mjson_print_int(out, va_arg(ap, int));
       } else if (fmt[i + 1] == 'B') {
@@ -395,6 +401,11 @@ int mjson_vprintf(struct mjson_out *out, const char *fmt, va_list ap) {
       } else if (fmt[i + 1] == 's') {
         char *buf = va_arg(ap, char *);
         len += mjson_print_buf(out, buf, strlen(buf));
+      } else if (memcmp(&fmt[i + 1], ".*s", 3) == 0) {
+        int n = va_arg(ap, int);
+        char *buf = va_arg(ap, char *);
+        len += mjson_print_buf(out, buf, n);
+        i += 2;
       } else if (fmt[i + 1] == 'f') {
         char buf[40];
         snprintf(buf, sizeof(buf), "%g", va_arg(ap, double));

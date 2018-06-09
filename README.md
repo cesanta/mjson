@@ -136,7 +136,9 @@ int mjson_printf(struct mjson_out *out, const char *fmt, ...);
 Print using `printf()`-like format string. Supported specifiers are:
 
 - `%Q` print quoted escaped string. Expect NUL-terminated `char *`
+- `%.*Q` print quoted escaped string. Expect `int, char *`
 - `%s` print string as is. Expect NUL-terminated `char *`
+- `%.*s` print string as is. Expect `int, char *`
 - `%f` print floating point number. Expect `double`
 - `%d` print integer number. Expect `int`
 - `%B` print `true` or `false`. Expect `int`
