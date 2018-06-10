@@ -11,7 +11,7 @@
 - Low level SAX API
 - High level API - fetch from JSON directly into C/C++ by
     [jsonpath](https://github.com/json-path/JsonPath)
-- Dependencies: `memcmp()`, `strtod()`, `strchr()`
+- Dependencies: `string.h`, `stdio.h`
 - MIT license
 
 # Parsing API
