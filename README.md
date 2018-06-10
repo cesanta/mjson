@@ -72,14 +72,33 @@ bool v = mjson_find_bool(s, len, "$.baz", false);   // Assigns to true
 int mjson_find_string(const char *s, int len, const char *path, char *to, int sz);
 ```
 In a JSON string `s`, `len`, find a string by its JSONPATH `path` and unescape
-it into a buffer `to`, `sz`. If a string not found, return 0.
-If found, return the length of unescaped string. Example:
+it into a buffer `to`, `sz` with terminating `\0`.
+If a string is not found, return 0.
+If a string is found, return the length of unescaped string. Example:
 
 ```c
 // s, len is a JSON string [ "abc", "de\r\n" ]
 char buf[100];
 int n = mjson_find_string(s, len, "$[1]", buf, sizeof(buf));  // Assigns to 4
 ```
+
+## mjson_find_base64()
+
+```c
+int mjson_find_base64(const char *s, int len, const char *path, char *to, int sz);
+```
+
+In a JSON string `s`, `len`, find a string by its JSONPATH `path` and
+base64 decode it into a buffer `to`, `sz` with terminating `\0`.
+If a string is not found, return 0.
+If a string is found, return the length of decoded string. Example:
+
+```c
+// s, len is a JSON string [ "MA==" ]
+char buf[100];
+int n = mjson_find_base64(s, len, "$[1]", buf, sizeof(buf));  // Assigns to 1
+```
+
 
 ## mjson()
 
@@ -126,22 +145,7 @@ into the structure. For example, in order to print to a network socket:
 struct mjson_out out = {my_socket_printer, {(char *) sock, 0, 0, 0}};
 ```
 
-## mjson_print_buf(), mjson_print_str(), mjson_print_int()
-
-
-The following example prints `{"a":123}` into a fixed size buffer:
-
-```c
-char buf[100];
-struct mjson_out = MJSON_OUT_FIXED_BUF(buf, sizeof(buf));
-
-mjson_print_buf(&out, "{", 1);
-mjson_print_str(&out, "a", 1);
-mjson_print_int(&out, 123);
-mjson_print_buf(&out, "}", 1);
-```
-
-## msjon_printf()
+## msjon_printf() 
 
 ```c
 int mjson_vprintf(struct mjson_out *out, const char *fmt, va_list ap);
@@ -157,6 +161,7 @@ Print using `printf()`-like format string. Supported specifiers are:
 - `%f` print floating point number. Expect `double`
 - `%d` print integer number. Expect `int`
 - `%B` print `true` or `false`. Expect `int`
+- `%V` print quoted base64-encoded string. Expect `int, char *`
 - `%M` print using custom print function. Expect `int (*)(struct mjson_out *, va_list *)`
 
 The following example produces `{"a":1, "b":[1234]}` into the

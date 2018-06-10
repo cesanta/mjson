@@ -289,6 +289,49 @@ int mjson_find_string(const char *s, int len, const char *path, char *to,
   return mjson_unescape(p + 1, sz - 2, to, n);
 }
 
+static int mjson_base64rev(int c) {
+  if (c >= 'A' && c <= 'Z') {
+    return c - 'A';
+  } else if (c >= 'a' && c <= 'z') {
+    return c + 26 - 'a';
+  } else if (c >= '0' && c <= '9') {
+    return c + 52 - '0';
+  } else if (c == '+') {
+    return 62;
+  } else if (c == '/') {
+    return 63;
+  } else {
+    return 64;
+  }
+}
+
+static int mjson_base64_dec(const char *src, int n, char *dst, int dlen) {
+  const char *end = src + n;
+  int len = 0;
+  while (src + 3 < end && len < dlen) {
+    int a = mjson_base64rev(src[0]), b = mjson_base64rev(src[1]),
+        c = mjson_base64rev(src[2]), d = mjson_base64rev(src[3]);
+    dst[len++] = (a << 2) | (b >> 4);
+    if (src[2] != '=' && len < dlen) {
+      dst[len++] = (b << 4) | (c >> 2);
+      if (src[3] != '=' && len < dlen) {
+        dst[len++] = (c << 6) | d;
+      }
+    }
+    src += 4;
+  }
+  if (len < dlen) dst[len] = '\0';
+  return len;
+}
+
+int mjson_find_base64(const char *s, int len, const char *path, char *to,
+                      int n) {
+  const char *p;
+  int sz;
+  if (mjson_find(s, len, path, &p, &sz) != MJSON_TOK_STRING) return 0;
+  return mjson_base64_dec(p + 1, sz - 2, to, n);
+}
+
 struct mjson_out {
   int (*print)(struct mjson_out *, const char *buf, int len);
   union {
@@ -365,6 +408,12 @@ int mjson_print_int(struct mjson_out *out, int n) {
   return len + out->print(out, &("0123456789"[n % 10]), 1);
 }
 
+int mjson_print_dbl(struct mjson_out *out, double d) {
+  char buf[40];
+  int n = snprintf(buf, sizeof(buf), "%g", d);
+  return out->print(out, buf, n);
+}
+
 int mjson_print_str(struct mjson_out *out, const char *s, int len) {
   int n = out->print(out, "\"", 1);
   for (int i = 0; i < len; i++) {
@@ -379,49 +428,65 @@ int mjson_print_str(struct mjson_out *out, const char *s, int len) {
   return n + out->print(out, "\"", 1);
 }
 
+int mjson_print_b64(struct mjson_out *out, const unsigned char *s, int n) {
+  const char *t =
+      "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+  int len = out->print(out, "\"", 1);
+  for (int i = 0; i < n; i += 3) {
+    int a = s[i], b = i + 1 < n ? s[i + 1] : 0, c = i + 2 < n ? s[i + 2] : 0;
+    char buf[4] = {t[a >> 2], t[(a & 3) << 4 | (b >> 4)], '=', '='};
+    if (i + 1 < n) buf[2] = t[(b & 15) << 2 | (c >> 6)];
+    if (i + 2 < n) buf[3] = t[c & 63];
+    len += out->print(out, buf, sizeof(buf));
+  }
+  return len + out->print(out, "\"", 1);
+}
+
 typedef int (*mjson_printf_fn_t)(struct mjson_out *, va_list *);
 
 int mjson_vprintf(struct mjson_out *out, const char *fmt, va_list ap) {
-  int len = 0;
+  int n = 0;
   for (int i = 0; fmt[i] != '\0'; i++) {
     if (fmt[i] == '%') {
       if (fmt[i + 1] == 'Q') {
         char *buf = va_arg(ap, char *);
-        len += mjson_print_str(out, buf, strlen(buf));
+        n += mjson_print_str(out, buf, strlen(buf));
       } else if (memcmp(&fmt[i + 1], ".*Q", 3) == 0) {
-        int n = va_arg(ap, int);
+        int len = va_arg(ap, int);
         char *buf = va_arg(ap, char *);
-        len += mjson_print_str(out, buf, n);
+        n += mjson_print_str(out, buf, len);
         i += 2;
       } else if (fmt[i + 1] == 'd') {
-        len += mjson_print_int(out, va_arg(ap, int));
+        n += mjson_print_int(out, va_arg(ap, int));
       } else if (fmt[i + 1] == 'B') {
         const char *s = va_arg(ap, int) ? "true" : "false";
-        len += mjson_print_buf(out, s, strlen(s));
+        n += mjson_print_buf(out, s, strlen(s));
       } else if (fmt[i + 1] == 's') {
         char *buf = va_arg(ap, char *);
-        len += mjson_print_buf(out, buf, strlen(buf));
+        n += mjson_print_buf(out, buf, strlen(buf));
       } else if (memcmp(&fmt[i + 1], ".*s", 3) == 0) {
-        int n = va_arg(ap, int);
+        int len = va_arg(ap, int);
         char *buf = va_arg(ap, char *);
-        len += mjson_print_buf(out, buf, n);
+        n += mjson_print_buf(out, buf, len);
         i += 2;
       } else if (fmt[i + 1] == 'f') {
-        char buf[40];
-        snprintf(buf, sizeof(buf), "%g", va_arg(ap, double));
-        len += mjson_print_buf(out, buf, strlen(buf));
+        n += mjson_print_dbl(out, va_arg(ap, double));
+      } else if (fmt[i + 1] == 'V') {
+        int len = va_arg(ap, int);
+        const char *buf = va_arg(ap, const char *);
+        n += mjson_print_b64(out, (unsigned char *) buf, len);
       } else if (fmt[i + 1] == 'M') {
         va_list tmp;
         va_copy(tmp, ap);
         mjson_printf_fn_t fn = va_arg(tmp, mjson_printf_fn_t);
-        len += fn(out, &tmp);
+        n += fn(out, &tmp);
       }
       i++;
     } else {
-      len += mjson_print_buf(out, &fmt[i], 1);
+      n += mjson_print_buf(out, &fmt[i], 1);
     }
   }
-  return len;
+  return n;
 }
 
 int mjson_printf(struct mjson_out *out, const char *fmt, ...) {

@@ -137,6 +137,18 @@ static void test_find_string(void) {
     assert(mjson_find_string(s, strlen(s), "$.ы", buf, sizeof(buf)) == 12);
     assert(strcmp(buf, "превед") == 0);
   }
+
+  {
+    const char *s = "[\"MA==\",\"MAo=\",\"MAr+\",\"MAr+Zw==\"]";
+    assert(mjson_find_base64(s, strlen(s), "$[0]", buf, sizeof(buf)) == 1);
+    assert(strcmp(buf, "0") == 0);
+    assert(mjson_find_base64(s, strlen(s), "$[1]", buf, sizeof(buf)) == 2);
+    assert(strcmp(buf, "0\n") == 0);
+    assert(mjson_find_base64(s, strlen(s), "$[2]", buf, sizeof(buf)) == 3);
+    assert(strcmp(buf, "0\n\xfe") == 0);
+    assert(mjson_find_base64(s, strlen(s), "$[3]", buf, sizeof(buf)) == 4);
+    assert(strcmp(buf, "0\n\xfeg") == 0);
+  }
 }
 
 static void test_print(void) {
@@ -241,6 +253,15 @@ static void test_printf(void) {
     assert(s != NULL);
     assert(memcmp(s, "[\"ab\",true]", 11) == 0);
     free(s);
+  }
+
+  {
+    char tmp[100], s[] = "0\n\xfeg";
+    struct mjson_out out = MJSON_OUT_FIXED_BUF(tmp, sizeof(tmp));
+    assert(mjson_printf(&out, "[%V,%V,%V,%V]", 1, s, 2, s, 3, s, 4, s) == 33);
+    assert(memcmp(tmp, "[\"MA==\",\"MAo=\",\"MAr+\",\"MAr+Zw==\"]", 33) == 0);
+    assert(out.u.fixed_buf.overflow == 0);
+    // printf("%d [%.*s]\n", n, n, tmp);
   }
 
   {
