@@ -399,13 +399,10 @@ int mjson_print_buf(struct mjson_out *out, const char *buf, int len) {
   return out->print(out, buf, len);
 }
 
-int mjson_print_int(struct mjson_out *out, int n) {
-  if (n < 0) {
-    out->print(out, "-", 1);
-    return mjson_print_int(out, -n) + 1;
-  }
-  int len = n > 10 ? mjson_print_int(out, n / 10) : 0;
-  return len + out->print(out, &("0123456789"[n % 10]), 1);
+int mjson_print_int(struct mjson_out *out, int value) {
+  char buf[40];
+  int len = snprintf(buf, sizeof(buf), "%d", value);
+  return out->print(out, buf, len);
 }
 
 int mjson_print_dbl(struct mjson_out *out, double d) {
@@ -457,7 +454,8 @@ int mjson_vprintf(struct mjson_out *out, const char *fmt, va_list ap) {
         n += mjson_print_str(out, buf, len);
         i += 2;
       } else if (fmt[i + 1] == 'd') {
-        n += mjson_print_int(out, va_arg(ap, int));
+        int val = va_arg(ap, int);
+        n += mjson_print_int(out, val);
       } else if (fmt[i + 1] == 'B') {
         const char *s = va_arg(ap, int) ? "true" : "false";
         n += mjson_print_buf(out, s, strlen(s));
