@@ -96,7 +96,7 @@ If a string is found, return the length of decoded string. Example:
 ```c
 // s, len is a JSON string [ "MA==" ]
 char buf[100];
-int n = mjson_find_base64(s, len, "$[1]", buf, sizeof(buf));  // Assigns to 1
+int n = mjson_find_base64(s, len, "$[0]", buf, sizeof(buf));  // Assigns to 1
 ```
 
 
