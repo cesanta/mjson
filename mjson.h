@@ -24,6 +24,10 @@
 #include <stdlib.h>
 #include <string.h>
 
+#ifndef MJSON_ENABLE_PRINT
+#define MJSON_ENABLE_PRINT 1
+#endif
+
 enum {
   MJSON_ERROR_INVALID_INPUT = -1,
   MJSON_ERROR_TOO_DEEP = -2,
@@ -49,9 +53,11 @@ typedef void (*mjson_cb_t)(int ev, const char *s, int off, int len, void *ud);
 #endif
 
 static int mjson_esc(int c, int esc) {
-  const char *esc1 = "\b\f\n\r\t\\\"/", *esc2 = "bfnrt\\\"/";
-  const char *p = strchr(esc ? esc1 : esc2, c);
-  return !p ? 0 : esc ? esc2[p - esc1] : esc1[p - esc2];
+  const char *p, *esc1 = "\b\f\n\r\t\\\"/", *esc2 = "bfnrt\\\"/";
+  for (p = esc ? esc1 : esc2; *p != '\0'; p++) {
+    if (*p == c) return esc ? esc2[p - esc1] : esc1[p - esc2];
+  }
+  return 0;
 }
 
 static int mjson_pass_string(const char *s, int len) {
@@ -332,6 +338,8 @@ int mjson_find_base64(const char *s, int len, const char *path, char *to,
   return mjson_base64_dec(p + 1, sz - 2, to, n);
 }
 
+#if MJSON_ENABLE_PRINT
+
 struct mjson_out {
   int (*print)(struct mjson_out *, const char *buf, int len);
   union {
@@ -494,3 +502,4 @@ int mjson_printf(struct mjson_out *out, const char *fmt, ...) {
   va_end(ap);
   return len;
 }
+#endif

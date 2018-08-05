@@ -145,7 +145,7 @@ into the structure. For example, in order to print to a network socket:
 struct mjson_out out = {my_socket_printer, {(char *) sock, 0, 0, 0}};
 ```
 
-## msjon_printf() 
+## msjon_printf()
 
 ```c
 int mjson_vprintf(struct mjson_out *out, const char *fmt, va_list ap);
