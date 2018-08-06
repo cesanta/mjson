@@ -503,3 +503,102 @@ int mjson_printf(struct mjson_out *out, const char *fmt, ...) {
   return len;
 }
 #endif
+
+#if MJSON_IMPLEMENT_STRTOD
+static int is_digit(int c) {
+  return c >= '0' && c <= '9';
+}
+
+/* NOTE: strtod() implementation by Yasuhiro Matsumoto. */
+double strtod(const char *str, const char **end) {
+  double d = 0.0;
+  int sign = 1, n = 0;
+  const char *p = str, *a = str;
+
+  /* decimal part */
+  if (*p == '-') {
+    sign = -1;
+    ++p;
+  } else if (*p == '+')
+    ++p;
+  if (is_digit(*p)) {
+    d = (double) (*p++ - '0');
+    while (*p && is_digit(*p)) {
+      d = d * 10.0 + (double) (*p - '0');
+      ++p;
+      ++n;
+    }
+    a = p;
+  } else if (*p != '.')
+    goto done;
+  d *= sign;
+
+  /* fraction part */
+  if (*p == '.') {
+    double f = 0.0;
+    double base = 0.1;
+    ++p;
+
+    if (is_digit(*p)) {
+      while (*p && is_digit(*p)) {
+        f += base * (*p - '0');
+        base /= 10.0;
+        ++p;
+        ++n;
+      }
+    }
+    d += f * sign;
+    a = p;
+  }
+
+  /* exponential part */
+  if ((*p == 'E') || (*p == 'e')) {
+    int e = 0;
+    ++p;
+
+    sign = 1;
+    if (*p == '-') {
+      sign = -1;
+      ++p;
+    } else if (*p == '+')
+      ++p;
+
+    if (is_digit(*p)) {
+      while (*p == '0') ++p;
+      e = (int) (*p++ - '0');
+      while (*p && is_digit(*p)) {
+        e = e * 10 + (int) (*p - '0');
+        ++p;
+      }
+      e *= sign;
+    } else if (!is_digit(*(a - 1))) {
+      a = str;
+      goto done;
+    } else if (*p == 0)
+      goto done;
+
+    if (d == 2.2250738585072011 && e == -308) {
+      d = 0.0;
+      a = p;
+      goto done;
+    }
+    if (d == 2.2250738585072012 && e <= -308) {
+      d *= 1.0e-308;
+      a = p;
+      goto done;
+    }
+    {
+      int i;
+      for (i = 0; i < 10; i++) d *= 10;
+    }
+    a = p;
+  } else if (p > str && !is_digit(*(p - 1))) {
+    a = str;
+    goto done;
+  }
+
+done:
+  if (end) *end = (char *) a;
+  return d;
+}
+#endif
