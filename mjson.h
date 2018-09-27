@@ -192,6 +192,14 @@ struct msjon_find_data {
   int tok;              // Returned token
 };
 
+static int len_s(const char *s) {
+    int i = 0;
+    while(s[i] != '\0' && s[i] != '.' && s[i] != '['){
+        i++;
+    }
+    return i;
+}
+
 static void mjson_find_cb(int tok, const char *s, int off, int len, void *ud) {
   struct msjon_find_data *data = (struct msjon_find_data *) ud;
   // printf("--> %2x %2d %2d %2d %2d\t'%s'\t'%.*s'\t\t'%.*s'\n", tok, data->d1,
@@ -224,7 +232,8 @@ static void mjson_find_cb(int tok, const char *s, int off, int len, void *ud) {
     }
   } else if (tok == MJSON_TOK_KEY && data->d1 == data->d2 + 1 &&
              data->path[data->pos] == '.' &&
-             !memcmp(s + off + 1, &data->path[data->pos + 1], len - 2)) {
+             !memcmp(s + off + 1, &data->path[data->pos + 1], len - 2) && 
+			 !(len_s(&data->path[data->pos + 1]) - (len - 2)) ){
     data->d2++;
     data->pos += len - 1;
   } else if (tok == '}' || tok == ']') {
