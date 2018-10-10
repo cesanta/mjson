@@ -200,9 +200,9 @@ static int mjson_plen(const char *s) {
 
 static void mjson_find_cb(int tok, const char *s, int off, int len, void *ud) {
   struct msjon_find_data *data = (struct msjon_find_data *) ud;
-  printf("--> %2x %2d %2d %2d %2d\t'%s'\t'%.*s'\t\t'%.*s'\n", tok, data->d1,
-         data->d2, data->i1, data->i2, data->path + data->pos, off, s, len,
-         s + off);
+  // printf("--> %2x %2d %2d %2d %2d\t'%s'\t'%.*s'\t\t'%.*s'\n", tok, data->d1,
+  //        data->d2, data->i1, data->i2, data->path + data->pos, off, s, len,
+  //        s + off);
   if (data->tok != MJSON_TOK_INVALID) return;  // Found
 
   if (tok == '{') {
