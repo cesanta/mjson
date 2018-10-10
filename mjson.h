@@ -192,11 +192,17 @@ struct msjon_find_data {
   int tok;              // Returned token
 };
 
+static int mjson_plen(const char *s) {
+  int i = 0;
+  while (s[i] != '\0' && s[i] != '.' && s[i] != '[') i++;
+  return i;
+}
+
 static void mjson_find_cb(int tok, const char *s, int off, int len, void *ud) {
   struct msjon_find_data *data = (struct msjon_find_data *) ud;
-  // printf("--> %2x %2d %2d %2d %2d\t'%s'\t'%.*s'\t\t'%.*s'\n", tok, data->d1,
-  //        data->d2, data->i1, data->i2, data->path + data->pos, off, s, len,
-  //        s + off);
+  printf("--> %2x %2d %2d %2d %2d\t'%s'\t'%.*s'\t\t'%.*s'\n", tok, data->d1,
+         data->d2, data->i1, data->i2, data->path + data->pos, off, s, len,
+         s + off);
   if (data->tok != MJSON_TOK_INVALID) return;  // Found
 
   if (tok == '{') {
@@ -223,7 +229,9 @@ static void mjson_find_cb(int tok, const char *s, int off, int len, void *ud) {
       }
     }
   } else if (tok == MJSON_TOK_KEY && data->d1 == data->d2 + 1 &&
-             data->path[data->pos] == '.' &&
+             data->path[data->pos] == '.' && s[off] == '"' &&
+             s[off + len - 1] == '"' &&
+             mjson_plen(&data->path[data->pos + 1]) == len - 2 &&
              !memcmp(s + off + 1, &data->path[data->pos + 1], len - 2)) {
     data->d2++;
     data->pos += len - 1;

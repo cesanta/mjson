@@ -115,6 +115,7 @@ static void test_find_number(void) {
   assert(mjson_find_number("[1,2,{\"a\":[3,4]}]", 17, "$[2].a[0]", 11) == 3);
   assert(mjson_find_number("[1,2,{\"a\":[3,4]}]", 17, "$[2].a[1]", 11) == 4);
   assert(mjson_find_number("[1,2,{\"a\":[3,4]}]", 17, "$[2].a[2]", 11) == 11);
+  assert(mjson_find_number("{\"a\":3,\"ab\":2}", 14, "$.ab", 0) == 2);
 }
 
 static void test_find_bool(void) {
