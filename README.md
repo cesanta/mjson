@@ -219,18 +219,43 @@ Parse JSON-RPC frame contained in `buf`, and invoke a registered handler.
 
 ## jsonrpc_ctx_export
 
-```c
-static int f(char *buf, int len, struct mjson_out *out, void *userdata) {
-  double arg = mjson_find_number(buf, len, ".num", 0);
-  mjson_printf(out, "{%Q:%g, %Q:%Q}", "a", arg, "userdata", (char *) userdata);
-  return 0;  // Returning success
-}
-
-...
-jsonrpc_ctx_export(&jsonrpc_default_context, "foo", foo, (void *) "hi");
-```
-
 Export JSON-RPC function. A function gets called by `jsonrpc_ctx_process()`,
 which parses an incoming frame and calls a registered handler.
 A handler function must return 0 for success, or 0 for error. It could use
 the printing API for creating the result, or error message for error.
+
+## JSON-RPC example implementation
+
+```c
+#include "mjson.h"
+
+static int foo(char *buf, int len, struct mjson_out *out, void *userdata) {
+  double x = mjson_find_number(buf, len, "$[1]", 0);
+  mjson_printf(out, "{%Q:%g,%Q:%Q}", "x", x, "ud", (char *) userdata);
+  return 0;
+}
+
+static int sender(char *buf, int len, void *privdata) {
+  printf("%.*s\n", len, buf);
+  return len;
+}
+
+int main(void) {
+  jsonrpc_ctx_init(&jsonrpc_default_context, sender, NULL, "1.0");
+
+  // Call rpc.list
+  char request1[] = "{\"id\": 1, \"method\": \"rpc.list\"}";
+  jsonrpc_ctx_process(&jsonrpc_default_context, request1, strlen(request1));
+
+  // Call non-existent method
+  char request2[] = "{\"id\": 1, \"method\": \"foo\"}";
+  jsonrpc_ctx_process(&jsonrpc_default_context, request2, strlen(request2));
+
+  // Register our own function
+  char request3[] = "{\"id\": 2, \"method\": \"foo\",\"params\":[0,1.23]}";
+  jsonrpc_ctx_export(&jsonrpc_default_context, "foo", foo, (void *) "hi");
+  jsonrpc_ctx_process(&jsonrpc_default_context, request3, strlen(request3));
+
+  return 0;
+}
+```
