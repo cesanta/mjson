@@ -216,7 +216,7 @@ static void test_printf(void) {
     struct mjson_out out = MJSON_OUT_FIXED_BUF(tmp, sizeof(tmp));
     // int n = mjson_printf(&out, "%f", 0.123);
     // printf("%d [%.*s]\n", n, n, tmp);
-    assert(mjson_printf(&out, "%f", 0.123) == 5);
+    assert(mjson_printf(&out, "%g", 0.123) == 5);
     assert(memcmp(tmp, "0.123", 5) == 0);
     assert(out.u.fixed_buf.overflow == 0);
   }
@@ -271,6 +271,51 @@ static void test_printf(void) {
   }
 }
 
+static int foo(char *buf, int len, struct mjson_out *out, void *userdata) {
+  double x = mjson_find_number(buf, len, "$[1]", 0);
+  mjson_printf(out, "{%Q:%g,%Q:%Q}", "x", x, "ud", (char *) userdata);
+  return 0;
+}
+
+#define OUTLEN 200
+static int sender(char *buf, int len, void *privdata) {
+  char *dst = (char *) privdata;
+  memmove(dst, buf, len > OUTLEN ? OUTLEN : len);
+  dst[len > OUTLEN ? OUTLEN : len] = '\0';
+  return len;
+}
+
+static void test_rpc(void) {
+  char out[OUTLEN + 1];
+
+  // Init context
+  jsonrpc_ctx_init(&jsonrpc_default_context, sender, out, "1.0");
+
+  {
+    // Call rpc.list
+    char request[] = "{\"id\": 1, \"method\": \"rpc.list\"}";
+    jsonrpc_ctx_process(&jsonrpc_default_context, request, strlen(request));
+    assert(strstr(out, "rpc.list") != NULL);
+  }
+
+  {
+    // Call non-existent method
+    char request[] = "{\"id\": 1, \"method\": \"foo\"}";
+    jsonrpc_ctx_process(&jsonrpc_default_context, request, strlen(request));
+    assert(strstr(out, "-32601") != NULL);
+  }
+
+  {
+    // Register our own function
+    char request[] = "{\"id\": 2, \"method\": \"foo\",\"params\":[0,1.23]}";
+    const char *reply = "{\"id\":2,\"result\":{\"x\":1.23,\"ud\":\"hi\"}}";
+    jsonrpc_ctx_export(&jsonrpc_default_context, "foo", foo, (void *) "hi");
+    jsonrpc_ctx_process(&jsonrpc_default_context, request, strlen(request));
+    // printf("--> [%s]\n", out);
+    assert(strcmp(out, reply) == 0);
+  }
+}
+
 int main() {
   test_cb();
   test_find();
@@ -279,5 +324,6 @@ int main() {
   test_find_string();
   test_print();
   test_printf();
+  test_rpc();
   return 0;
 }

@@ -1,4 +1,4 @@
-# mjson - a JSON parser and emitter for embedded systems
+# mjson - a JSON parser, emitter and JSON-RPC engine for embedded systems
 
 [![Build Status](https://travis-ci.org/cpq/mjson.svg?branch=master)](https://travis-ci.org/cpq/mjson)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](https://opensource.org/licenses/MIT)
@@ -12,7 +12,16 @@
 - High level API - fetch from JSON directly into C/C++ by
     [jsonpath](https://github.com/json-path/JsonPath)
 - Dependencies: `string.h`, `stdio.h`
+- Built-in RPC API: `rpc.list`, `sys.info`, `fs.{read,write,list,rename,remove}`
 - MIT license
+
+# Compilation options
+
+- `-D MJSON_ENABLE_PRINT=0` disable emitting functionality, default: enabled
+- `-D MJSON_IMPLEMENT_STRTOD=1` use own `strtod()`, default: stdlib is used
+- `-D MJSON_MAX_DEPTH=30` define max object depth, default: 20
+- `-D MJSON_ENABLE_RPC=0` disable RPC functionality, default: enabled
+- `-D MJSON_ENABLE_FS=1` enable `fs.*` file RPC service, default: disabled
 
 # Parsing API
 
@@ -158,7 +167,7 @@ Print using `printf()`-like format string. Supported specifiers are:
 - `%.*Q` print quoted escaped string. Expect `int, char *`
 - `%s` print string as is. Expect NUL-terminated `char *`
 - `%.*s` print string as is. Expect `int, char *`
-- `%f` print floating point number. Expect `double`
+- `%g` print floating point number. Expect `double`
 - `%d` print integer number. Expect `int`
 - `%B` print `true` or `false`. Expect `int`
 - `%V` print quoted base64-encoded string. Expect `int, char *`
@@ -181,3 +190,47 @@ mjson_printf(&out, "{%Q:%d, %Q:%M}", "a", 1, "b", custom_printer, 1234);
 /* At this point `s` contains: {"a":1, "b":[1234]}  */
 free(s);
 ```
+
+# JSON-RPC API
+
+For the example, see `unit_test.c :: test_rpc()` function.
+
+## jsonrpc_ctx_init
+
+```
+void jsonrpc_ctx_init(struct jsonrpc_ctx *ctx,
+                      int (*sender)(char *, int, void *), void *senderdata,
+                      const char *version);
+```
+
+Initialize JSON-RPC context. The `sender()` function must be provided
+by the caller, and it is responsible to send the prepared JSON-RPC
+reply to the remote side - to the UART, or socket, or whatever.
+The `version` is a firmware version passed to the `info` handler.
+
+## jsonrpc_ctx_process
+
+```c
+jsonrpc_ctx_process(&jsonrpc_default_context, buf, buf_len);
+```
+
+Parse JSON-RPC frame contained in `buf`, and invoke a registered handler.
+
+
+## jsonrpc_ctx_export
+
+```c
+static int f(char *buf, int len, struct mjson_out *out, void *userdata) {
+  double arg = mjson_find_number(buf, len, ".num", 0);
+  mjson_printf(out, "{%Q:%g, %Q:%Q}", "a", arg, "userdata", (char *) userdata);
+  return 0;  // Returning success
+}
+
+...
+jsonrpc_ctx_export(&jsonrpc_default_context, "foo", foo, (void *) "hi");
+```
+
+Export JSON-RPC function. A function gets called by `jsonrpc_ctx_process()`,
+which parses an incoming frame and calls a registered handler.
+A handler function must return 0 for success, or 0 for error. It could use
+the printing API for creating the result, or error message for error.
