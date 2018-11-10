@@ -226,6 +226,14 @@ the printing API for creating the result, or error message for error.
 
 ## JSON-RPC example implementation
 
+In the following example, we initialize JSON-RPC context, and call
+a couple of JSON-RPC methods: a built-in `rpc.list` method which lists
+all registered methods, and our own `foo` method.
+
+The `sender()` implementation just prints the reply to the standard output,
+but in real life it should send a reply to the real remote peer - UART, socket,
+or whatever else.
+
 ```c
 #include "mjson.h"
 
@@ -236,7 +244,7 @@ static int foo(char *buf, int len, struct mjson_out *out, void *userdata) {
 }
 
 static int sender(char *buf, int len, void *privdata) {
-  printf("%.*s\n", len, buf);
+  printf("%.*s\n", len, buf); // Print the JSON-RPC reply to stdout
   return len;
 }
 
