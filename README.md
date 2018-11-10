@@ -249,20 +249,21 @@ static int sender(char *buf, int len, void *privdata) {
 }
 
 int main(void) {
-  jsonrpc_ctx_init(&jsonrpc_default_context, sender, NULL, "1.0");
+  struct jsonrpc_ctx *ctx = &jsonrpc_default_context;
+  jsonrpc_ctx_init(ctx, sender, NULL, "1.0");
 
   // Call rpc.list
   char request1[] = "{\"id\": 1, \"method\": \"rpc.list\"}";
-  jsonrpc_ctx_process(&jsonrpc_default_context, request1, strlen(request1));
+  jsonrpc_ctx_process(ctx, request1, strlen(request1));
 
   // Call non-existent method
   char request2[] = "{\"id\": 1, \"method\": \"foo\"}";
-  jsonrpc_ctx_process(&jsonrpc_default_context, request2, strlen(request2));
+  jsonrpc_ctx_process(ctx, request2, strlen(request2));
 
   // Register our own function
   char request3[] = "{\"id\": 2, \"method\": \"foo\",\"params\":[0,1.23]}";
-  jsonrpc_ctx_export(&jsonrpc_default_context, "foo", foo, (void *) "hi");
-  jsonrpc_ctx_process(&jsonrpc_default_context, request3, strlen(request3));
+  jsonrpc_ctx_export(ctx, "foo", foo, (void *) "hi");
+  jsonrpc_ctx_process(ctx, request3, strlen(request3));
 
   return 0;
 }

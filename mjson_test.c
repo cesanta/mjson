@@ -286,22 +286,23 @@ static int sender(char *buf, int len, void *privdata) {
 }
 
 static void test_rpc(void) {
+  struct jsonrpc_ctx *ctx = &jsonrpc_default_context;
   char out[OUTLEN + 1];
 
   // Init context
-  jsonrpc_ctx_init(&jsonrpc_default_context, sender, out, "1.0");
+  jsonrpc_ctx_init(ctx, sender, out, "1.0");
 
   {
     // Call rpc.list
     char request[] = "{\"id\": 1, \"method\": \"rpc.list\"}";
-    jsonrpc_ctx_process(&jsonrpc_default_context, request, strlen(request));
+    jsonrpc_ctx_process(ctx, request, strlen(request));
     assert(strstr(out, "rpc.list") != NULL);
   }
 
   {
     // Call non-existent method
     char request[] = "{\"id\": 1, \"method\": \"foo\"}";
-    jsonrpc_ctx_process(&jsonrpc_default_context, request, strlen(request));
+    jsonrpc_ctx_process(ctx, request, strlen(request));
     assert(strstr(out, "-32601") != NULL);
   }
 
@@ -309,8 +310,8 @@ static void test_rpc(void) {
     // Register our own function
     char request[] = "{\"id\": 2, \"method\": \"foo\",\"params\":[0,1.23]}";
     const char *reply = "{\"id\":2,\"result\":{\"x\":1.23,\"ud\":\"hi\"}}";
-    jsonrpc_ctx_export(&jsonrpc_default_context, "foo", foo, (void *) "hi");
-    jsonrpc_ctx_process(&jsonrpc_default_context, request, strlen(request));
+    jsonrpc_ctx_export(ctx, "foo", foo, (void *) "hi");
+    jsonrpc_ctx_process(ctx, request, strlen(request));
     // printf("--> [%s]\n", out);
     assert(strcmp(out, reply) == 0);
   }
