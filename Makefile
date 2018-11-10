@@ -10,4 +10,5 @@ vc98: mjson_test.c mjson.h
 	$(VC98) wine cl mjson_test.c $(TFLAGS) /Fe$@.exe
 	$(VC98) wine $@.exe
 
-
+clean:
+	rm -rf test *.exe *.obj *.dSYM

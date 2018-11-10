@@ -3,6 +3,18 @@
 [![Build Status](https://travis-ci.org/cpq/mjson.svg?branch=master)](https://travis-ci.org/cpq/mjson)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](https://opensource.org/licenses/MIT)
 
+# Expose ANY microcontroller to the Internet
+
+The main purpose of this library is to make it possible for ANY microcontroller
+expose its own set of functions as simple cloud RESTful endpoints.
+
+```
+┌────────────┐      ┌─────────────┐     ┌───────────────┐
+│ target MCU │ UART │ bridge MCU  │ TLS │ Cloud service │
+│ e.g. Nano  ├──────┤ Mongoose OS ├─────┤     mDash     ├──█ REST API
+╰────────────┘      ╰─────────────┘     ╰───────────────┘
+```
+
 
 # Features
 
