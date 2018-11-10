@@ -237,12 +237,14 @@ or whatever else.
 ```c
 #include "mjson.h"
 
+// A custom RPC handler. Many handlers can be registered.
 static int foo(char *buf, int len, struct mjson_out *out, void *userdata) {
   double x = mjson_find_number(buf, len, "$[1]", 0);
   mjson_printf(out, "{%Q:%g,%Q:%Q}", "x", x, "ud", (char *) userdata);
   return 0;
 }
 
+// Sender function receives a reply frame and must forward it to the peer.
 static int sender(char *buf, int len, void *privdata) {
   printf("%.*s\n", len, buf); // Print the JSON-RPC reply to stdout
   return len;
