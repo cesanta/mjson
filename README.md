@@ -9,12 +9,18 @@ The main purpose of this library is to make it possible for ANY microcontroller
 expose its own set of functions as simple cloud RESTful endpoints.
 
 ```
-┌────────────┐      ┌─────────────┐     ┌───────────────┐
-│ target MCU │ UART │ bridge MCU  │ TLS │ Cloud service │
-│ e.g. Nano  ├──────┤ Mongoose OS ├─────┤     mDash     ├──█ REST API
-╰────────────┘      ╰─────────────┘     ╰───────────────┘
+┌──────────────┐      ┌─────────────┐     ┌───────────────┐
+│ target MCU   │ UART │ bridge MCU  │ TLS │ Cloud service │
+│ e.g. Arduino ├──────┤ e.g. ESP32  ├─────┤     mDash     ├──█ REST API
+│   mjson.h    │      │ Mongoose OS │     │               │
+╰──────────────┘      ╰─────────────┘     ╰───────────────┘
 ```
 
+- Open rpc.ino in Arduino IDE, build and flash on any Arduino
+- Connect Arduino with any board (e.g. ESP8266) running
+  [Mongoose OS](https://mongoose-os.com) over UART
+- Configure ESP8266 on mDash ([see docs](https://mongoose-os.com/docs/mdash/registration.md))
+- Call Arduino via RESTful
 
 # Features
 
@@ -27,7 +33,7 @@ expose its own set of functions as simple cloud RESTful endpoints.
 - Built-in RPC API: `rpc.list`, `sys.info`, `fs.{read,write,list,rename,remove}`
 - MIT license
 
-# Compilation options
+# Build options
 
 - `-D MJSON_ENABLE_PRINT=0` disable emitting functionality, default: enabled
 - `-D MJSON_IMPLEMENT_STRTOD=1` use own `strtod()`, default: stdlib is used
