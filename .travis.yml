@@ -1,4 +1,18 @@
 language: c
 sudo: false
-script:
-  - make test
+os:
+  - linux
+  - osx
+  - windows
+compiler:
+  - clang
+  - gcc
+script: make test
+matrix:
+  include:
+    - os: linux
+      compiler: clang
+      script: make vc98
+      sudo: required
+      services:
+        - docker

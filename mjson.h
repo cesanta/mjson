@@ -56,6 +56,12 @@ typedef void (*mjson_cb_t)(int ev, const char *s, int off, int len, void *ud);
 #define MJSON_MAX_DEPTH 20
 #endif
 
+#if !defined(_MSC_VER) || _MSC_VER >= 1700
+#else
+#define va_copy(x, y) (x) = (y)
+#define snprintf _snprintf
+#endif
+
 static int mjson_esc(int c, int esc) {
   const char *p, *esc1 = "\b\f\n\r\t\\\"/", *esc2 = "bfnrt\\\"/";
   for (p = esc ? esc1 : esc2; *p != '\0'; p++) {
@@ -65,7 +71,8 @@ static int mjson_esc(int c, int esc) {
 }
 
 static int mjson_pass_string(const char *s, int len) {
-  for (int i = 0; i < len; i++) {
+  int i;
+  for (i = 0; i < len; i++) {
     if (s[i] == '\\' && i + 1 < len && mjson_esc(s[i + 1], 1)) {
       i++;
     } else if (s[i] == '\0') {
@@ -386,12 +393,12 @@ struct mjson_out {
   }
 
 int mjson_print_fixed_buf(struct mjson_out *out, const char *ptr, int len) {
-  int left = out->u.fixed_buf.size - out->u.fixed_buf.len;
+  int i, left = out->u.fixed_buf.size - out->u.fixed_buf.len;
   if (left < len) {
     out->u.fixed_buf.overflow = 1;
     len = left;
   }
-  for (int i = 0; i < len; i++) {
+  for (i = 0; i < len; i++) {
     out->u.fixed_buf.ptr[out->u.fixed_buf.len + i] = ptr[i];
   }
   out->u.fixed_buf.len += len;
@@ -432,8 +439,8 @@ int mjson_print_dbl(struct mjson_out *out, double d) {
 }
 
 int mjson_print_str(struct mjson_out *out, const char *s, int len) {
-  int n = out->print(out, "\"", 1);
-  for (int i = 0; i < len; i++) {
+  int i, n = out->print(out, "\"", 1);
+  for (i = 0; i < len; i++) {
     char c = mjson_esc(s[i], 1);
     if (c) {
       n += out->print(out, "\\", 1);
@@ -448,8 +455,8 @@ int mjson_print_str(struct mjson_out *out, const char *s, int len) {
 int mjson_print_b64(struct mjson_out *out, const unsigned char *s, int n) {
   const char *t =
       "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
-  int len = out->print(out, "\"", 1);
-  for (int i = 0; i < n; i += 3) {
+  int i, len = out->print(out, "\"", 1);
+  for (i = 0; i < n; i += 3) {
     int a = s[i], b = i + 1 < n ? s[i + 1] : 0, c = i + 2 < n ? s[i + 2] : 0;
     char buf[4] = {t[a >> 2], t[(a & 3) << 4 | (b >> 4)], '=', '='};
     if (i + 1 < n) buf[2] = t[(b & 15) << 2 | (c >> 6)];
@@ -462,8 +469,8 @@ int mjson_print_b64(struct mjson_out *out, const unsigned char *s, int n) {
 typedef int (*mjson_printf_fn_t)(struct mjson_out *, va_list *);
 
 int mjson_vprintf(struct mjson_out *out, const char *fmt, va_list ap) {
-  int n = 0;
-  for (int i = 0; fmt[i] != '\0'; i++) {
+  int i, n = 0;
+  for (i = 0; fmt[i] != '\0'; i++) {
     if (fmt[i] == '%') {
       if (fmt[i + 1] == 'Q') {
         char *buf = va_arg(ap, char *);
@@ -495,8 +502,9 @@ int mjson_vprintf(struct mjson_out *out, const char *fmt, va_list ap) {
         n += mjson_print_b64(out, (unsigned char *) buf, len);
       } else if (fmt[i + 1] == 'M') {
         va_list tmp;
+        mjson_printf_fn_t fn;
         va_copy(tmp, ap);
-        mjson_printf_fn_t fn = va_arg(tmp, mjson_printf_fn_t);
+        fn = va_arg(tmp, mjson_printf_fn_t);
         n += fn(out, &tmp);
       }
       i++;
@@ -509,8 +517,9 @@ int mjson_vprintf(struct mjson_out *out, const char *fmt, va_list ap) {
 
 int mjson_printf(struct mjson_out *out, const char *fmt, ...) {
   va_list ap;
+  int len;
   va_start(ap, fmt);
-  int len = mjson_vprintf(out, fmt, ap);
+  len = mjson_vprintf(out, fmt, ap);
   va_end(ap);
   return len;
 }
@@ -672,6 +681,9 @@ int jsonrpc_ctx_process(struct jsonrpc_ctx *ctx, char *req, int req_sz) {
   char method[50];
   int id_sz = 0, method_sz = 0, params_sz = 0, code = JSONRPC_ERROR_NOT_FOUND;
   struct jsonrpc_method *m;
+  char *res = NULL, *frame = NULL;
+  struct mjson_out rout = MJSON_OUT_DYNAMIC_BUF(&res);
+  struct mjson_out fout = MJSON_OUT_DYNAMIC_BUF(&frame);
 
   /* Method must exist and must be a string. */
   if ((method_sz = mjson_find_string(req, req_sz, "$.method", method,
@@ -683,14 +695,10 @@ int jsonrpc_ctx_process(struct jsonrpc_ctx *ctx, char *req, int req_sz) {
   mjson_find(req, req_sz, "$.id", &id, &id_sz);
   mjson_find(req, req_sz, "$.params", &params, &params_sz);
 
-  char *res = NULL, *frame = NULL;
-  struct mjson_out rout = MJSON_OUT_DYNAMIC_BUF(&res);
-  struct mjson_out fout = MJSON_OUT_DYNAMIC_BUF(&frame);
-
   for (m = ctx->methods; m != NULL; m = m->next) {
     if (m->method_sz == method_sz && !memcmp(m->method, method, method_sz)) {
       if (params == NULL) params = "";
-      int code = m->cb((char *) params, params_sz, &rout, m->cbdata);
+      code = m->cb((char *) params, params_sz, &rout, m->cbdata);
       if (id == NULL) {
         /* No id, not sending any reply. */
         free(res);
@@ -753,8 +761,9 @@ static int info(char *args, int len, struct mjson_out *out, void *userdata) {
 
 static int rpclist(char *in, int in_len, struct mjson_out *out, void *ud) {
   struct jsonrpc_ctx *ctx = (struct jsonrpc_ctx *) ud;
+  struct jsonrpc_method *m;
   mjson_print_buf(out, "[", 1);
-  for (struct jsonrpc_method *m = ctx->methods; m != NULL; m = m->next) {
+  for (m = ctx->methods; m != NULL; m = m->next) {
     if (m != ctx->methods) mjson_print_buf(out, ",", 1);
     mjson_print_str(out, m->method, strlen(m->method));
   }

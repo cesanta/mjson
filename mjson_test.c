@@ -4,6 +4,7 @@
 #include "mjson.h"
 
 static void test_cb(void) {
+  const char *str;
   {
     const char *s = "{\"a\": true, \"b\": [ null, 3 ]}";
     assert(mjson(s, strlen(s), NULL, NULL) == (int) strlen(s));
@@ -29,59 +30,71 @@ static void test_cb(void) {
     assert(mjson(s, strlen(s), NULL, NULL) == MJSON_ERROR_TOO_DEEP);
   }
 
-  assert(mjson("\"abc\"", 0, NULL, NULL) == MJSON_ERROR_INVALID_INPUT);
-  assert(mjson("\"abc\"", 1, NULL, NULL) == MJSON_ERROR_INVALID_INPUT);
-  assert(mjson("\"abc\"", 2, NULL, NULL) == MJSON_ERROR_INVALID_INPUT);
-  assert(mjson("\"abc\"", 3, NULL, NULL) == MJSON_ERROR_INVALID_INPUT);
-  assert(mjson("\"abc\"", 4, NULL, NULL) == MJSON_ERROR_INVALID_INPUT);
-  assert(mjson("\"abc\"", 5, NULL, NULL) == 5);
+  str = "\"abc\"";
+  assert(mjson(str, 0, NULL, NULL) == MJSON_ERROR_INVALID_INPUT);
+  assert(mjson(str, 1, NULL, NULL) == MJSON_ERROR_INVALID_INPUT);
+  assert(mjson(str, 2, NULL, NULL) == MJSON_ERROR_INVALID_INPUT);
+  assert(mjson(str, 3, NULL, NULL) == MJSON_ERROR_INVALID_INPUT);
+  assert(mjson(str, 4, NULL, NULL) == MJSON_ERROR_INVALID_INPUT);
+  assert(mjson(str, 5, NULL, NULL) == 5);
 
-  assert(mjson("{\"a\":1}", 0, NULL, NULL) == MJSON_ERROR_INVALID_INPUT);
-  assert(mjson("{\"a\":1}", 1, NULL, NULL) == MJSON_ERROR_INVALID_INPUT);
-  assert(mjson("{\"a\":1}", 2, NULL, NULL) == MJSON_ERROR_INVALID_INPUT);
-  assert(mjson("{\"a\":1}", 3, NULL, NULL) == MJSON_ERROR_INVALID_INPUT);
-  assert(mjson("{\"a\":1}", 4, NULL, NULL) == MJSON_ERROR_INVALID_INPUT);
-  assert(mjson("{\"a\":1}", 5, NULL, NULL) == MJSON_ERROR_INVALID_INPUT);
-  assert(mjson("{\"a\":1}", 6, NULL, NULL) == MJSON_ERROR_INVALID_INPUT);
-  assert(mjson("{\"a\":1}", 7, NULL, NULL) == 7);
+  str = "{\"a\":1}";
+  assert(mjson(str, 0, NULL, NULL) == MJSON_ERROR_INVALID_INPUT);
+  assert(mjson(str, 1, NULL, NULL) == MJSON_ERROR_INVALID_INPUT);
+  assert(mjson(str, 2, NULL, NULL) == MJSON_ERROR_INVALID_INPUT);
+  assert(mjson(str, 3, NULL, NULL) == MJSON_ERROR_INVALID_INPUT);
+  assert(mjson(str, 4, NULL, NULL) == MJSON_ERROR_INVALID_INPUT);
+  assert(mjson(str, 5, NULL, NULL) == MJSON_ERROR_INVALID_INPUT);
+  assert(mjson(str, 6, NULL, NULL) == MJSON_ERROR_INVALID_INPUT);
+  assert(mjson(str, 7, NULL, NULL) == 7);
 
-  assert(mjson("{\"a\":[]}", 8, NULL, NULL) == 8);
-  assert(mjson("{\"a\":{}}", 8, NULL, NULL) == 8);
+  str = "{\"a\":[]}";
+  assert(mjson(str, 8, NULL, NULL) == 8);
+  str = "{\"a\":{}}";
+  assert(mjson(str, 8, NULL, NULL) == 8);
   assert(mjson("[]", 2, NULL, NULL) == 2);
   assert(mjson("{}", 2, NULL, NULL) == 2);
   assert(mjson("[[]]", 4, NULL, NULL) == 4);
   assert(mjson("[[],[]]", 7, NULL, NULL) == 7);
   assert(mjson("[{}]", 4, NULL, NULL) == 4);
   assert(mjson("[{},{}]", 7, NULL, NULL) == 7);
-  assert(mjson("{\"a\":[{}]}", 10, NULL, NULL) == 10);
+  str = "{\"a\":[{}]}";
+  assert(mjson(str, 10, NULL, NULL) == 10);
 }
 
 static void test_find(void) {
-  const char *p;
+  const char *p, *str;
   int n;
   assert(mjson_find("", 0, "", &p, &n) == MJSON_TOK_INVALID);
   assert(mjson_find("", 0, "$", &p, &n) == MJSON_TOK_INVALID);
   assert(mjson_find("123", 3, "$", &p, &n) == MJSON_TOK_NUMBER);
   assert(n == 3 && memcmp(p, "123", 3) == 0);
-  assert(mjson_find("{\"a\":true}", 10, "$.a", &p, &n) == MJSON_TOK_TRUE);
+  str = "{\"a\":true}";
+  assert(mjson_find(str, 10, "$.a", &p, &n) == MJSON_TOK_TRUE);
   assert(n == 4 && memcmp(p, "true", 4) == 0);
-  assert(mjson_find("{\"a\":{\"c\":null},\"c\":2}", 22, "$.c", &p, &n) ==
-         MJSON_TOK_NUMBER);
+  str = "{\"a\":{\"c\":null},\"c\":2}";
+  assert(mjson_find(str, 22, "$.c", &p, &n) == MJSON_TOK_NUMBER);
   assert(n == 1 && memcmp(p, "2", 1) == 0);
-  assert(mjson_find("{\"a\":{\"c\":null},\"c\":2}", 22, "$.a.c", &p, &n) ==
-         MJSON_TOK_NULL);
+  str = "{\"a\":{\"c\":null},\"c\":2}";
+  assert(mjson_find(str, 22, "$.a.c", &p, &n) == MJSON_TOK_NULL);
   assert(n == 4 && memcmp(p, "null", 4) == 0);
-  assert(mjson_find("{\"a\":[1,null]}", 15, "$.a", &p, &n) == '[');
+  str = "{\"a\":[1,null]}";
+  assert(mjson_find(str, 15, "$.a", &p, &n) == '[');
   assert(n == 8 && memcmp(p, "[1,null]", 8) == 0);
-  assert(mjson_find("{\"a\":{\"b\":7}}", 14, "$.a", &p, &n) == '{');
-  assert(n == 7 && memcmp(p, "{\"b\":7}", 7) == 0);
+  str = "{\"a\":{\"b\":7}}";
+  assert(mjson_find(str, 14, "$.a", &p, &n) == '{');
+  str = "{\"b\":7}";
+  assert(n == 7 && memcmp(p, str, 7) == 0);
 }
 
 static void test_find_number(void) {
+  const char *str;
   assert(mjson_find_number("", 0, "$", 123) == 123);
   assert(mjson_find_number("234", 3, "$", 123) == 234);
-  assert(mjson_find_number("{\"a\":-7}", 8, "$.a", 123) == -7);
-  assert(mjson_find_number("{\"a\":1.2e3}", 11, "$.a", 123) == 1.2e3);
+  str = "{\"a\":-7}";
+  assert(mjson_find_number(str, 8, "$.a", 123) == -7);
+  str = "{\"a\":1.2e3}";
+  assert(mjson_find_number(str, 11, "$.a", 123) == 1.2e3);
   assert(mjson_find_number("[1.23,-43.47,17]", 16, "$", 42) == 42);
   assert(mjson_find_number("[1.23,-43.47,17]", 16, "$[0]", 42) == 1.23);
   assert(mjson_find_number("[1.23,-43.47,17]", 16, "$[1]", 42) == -43.47);
@@ -111,11 +124,16 @@ static void test_find_number(void) {
   assert(mjson_find_number("[1,[2,[],3,[4,5]]]", 18, "$[1][3][2]", 42) == 42);
   assert(mjson_find_number("[1,[2,[],3,[4,5]]]", 18, "$[1][3][2][0]", 3) == 3);
 
-  assert(mjson_find_number("[1,2,{\"a\":[3,4]}]", 17, "$[1]", 3) == 2);
-  assert(mjson_find_number("[1,2,{\"a\":[3,4]}]", 17, "$[2].a[0]", 11) == 3);
-  assert(mjson_find_number("[1,2,{\"a\":[3,4]}]", 17, "$[2].a[1]", 11) == 4);
-  assert(mjson_find_number("[1,2,{\"a\":[3,4]}]", 17, "$[2].a[2]", 11) == 11);
-  assert(mjson_find_number("{\"a\":3,\"ab\":2}", 14, "$.ab", 0) == 2);
+  str = "[1,2,{\"a\":[3,4]}]";
+  assert(mjson_find_number(str, 17, "$[1]", 3) == 2);
+  str = "[1,2,{\"a\":[3,4]}]";
+  assert(mjson_find_number(str, 17, "$[2].a[0]", 11) == 3);
+  str = "[1,2,{\"a\":[3,4]}]";
+  assert(mjson_find_number(str, 17, "$[2].a[1]", 11) == 4);
+  str = "[1,2,{\"a\":[3,4]}]";
+  assert(mjson_find_number(str, 17, "$[2].a[2]", 11) == 11);
+  str = "{\"a\":3,\"ab\":2}";
+  assert(mjson_find_number(str, 14, "$.ab", 0) == 2);
 }
 
 static void test_find_bool(void) {
@@ -154,6 +172,7 @@ static void test_find_string(void) {
 
 static void test_print(void) {
   char tmp[100];
+  const char *str;
 
   {
     struct mjson_out out = MJSON_OUT_FIXED_BUF(tmp, sizeof(tmp));
@@ -192,7 +211,8 @@ static void test_print(void) {
   {
     struct mjson_out out = MJSON_OUT_FIXED_BUF(tmp, sizeof(tmp));
     assert(mjson_print_str(&out, "a", 1) == 3);
-    assert(memcmp(tmp, "\"a\"", 3) == 0);
+    str = "\"a\"";
+    assert(memcmp(tmp, str, 3) == 0);
     assert(out.u.fixed_buf.overflow == 0);
   }
 
@@ -200,7 +220,8 @@ static void test_print(void) {
     struct mjson_out out = MJSON_OUT_FIXED_BUF(tmp, sizeof(tmp));
     const char *s = "a\b\n\f\r\t\"";
     assert(mjson_print_str(&out, s, 7) == 15);
-    assert(memcmp(tmp, "\"a\\b\\n\\f\\r\\t\\\"\"", 15) == 0);
+    str = "\"a\\b\\n\\f\\r\\t\\\"\"";
+    assert(memcmp(tmp, str, 15) == 0);
     assert(out.u.fixed_buf.overflow == 0);
   }
 }
@@ -211,6 +232,7 @@ static int f1(struct mjson_out *out, va_list *ap) {
 }
 
 static void test_printf(void) {
+  const char *str;
   {
     char tmp[20];
     struct mjson_out out = MJSON_OUT_FIXED_BUF(tmp, sizeof(tmp));
@@ -225,7 +247,8 @@ static void test_printf(void) {
     char tmp[20];
     struct mjson_out out = MJSON_OUT_FIXED_BUF(tmp, sizeof(tmp));
     assert(mjson_printf(&out, "{%Q:%B}", "a", 1) == 10);
-    assert(memcmp(tmp, "{\"a\":true}", 10) == 0);
+    str = "{\"a\":true}";
+    assert(memcmp(tmp, str, 10) == 0);
     assert(out.u.fixed_buf.overflow == 0);
   }
 
@@ -234,7 +257,8 @@ static void test_printf(void) {
     struct mjson_out out = MJSON_OUT_DYNAMIC_BUF(&s);
     assert(mjson_printf(&out, "{%Q:%d, %Q:[%s]}", "a", 1, "b", "null") == 19);
     assert(s != NULL);
-    assert(memcmp(s, "{\"a\":1, \"b\":[null]}", 19) == 0);
+    str = "{\"a\":1, \"b\":[null]}";
+    assert(memcmp(s, str, 19) == 0);
     free(s);
   }
 
@@ -243,7 +267,8 @@ static void test_printf(void) {
     struct mjson_out out = MJSON_OUT_DYNAMIC_BUF(&s);
     assert(mjson_printf(&out, "{%Q:%d, %Q:%M}", "a", 1, "b", f1, 1234) == 19);
     assert(s != NULL);
-    assert(memcmp(s, "{\"a\":1, \"b\":[1234]}", 19) == 0);
+    str = "{\"a\":1, \"b\":[1234]}";
+    assert(memcmp(s, str, 19) == 0);
     free(s);
   }
 
@@ -252,7 +277,8 @@ static void test_printf(void) {
     struct mjson_out out = MJSON_OUT_DYNAMIC_BUF(&s);
     assert(mjson_printf(&out, "[%.*Q,%.*s]", 2, "abc", 4, "truell") == 11);
     assert(s != NULL);
-    assert(memcmp(s, "[\"ab\",true]", 11) == 0);
+    str = "[\"ab\",true]";
+    assert(memcmp(s, str, 11) == 0);
     free(s);
   }
 
@@ -260,7 +286,8 @@ static void test_printf(void) {
     char tmp[100], s[] = "0\n\xfeg";
     struct mjson_out out = MJSON_OUT_FIXED_BUF(tmp, sizeof(tmp));
     assert(mjson_printf(&out, "[%V,%V,%V,%V]", 1, s, 2, s, 3, s, 4, s) == 33);
-    assert(memcmp(tmp, "[\"MA==\",\"MAo=\",\"MAr+\",\"MAr+Zw==\"]", 33) == 0);
+    str = "[\"MA==\",\"MAo=\",\"MAr+\",\"MAr+Zw==\"]";
+    assert(memcmp(tmp, str, 33) == 0);
     assert(out.u.fixed_buf.overflow == 0);
     // printf("%d [%.*s]\n", n, n, tmp);
   }
