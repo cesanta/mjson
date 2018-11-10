@@ -120,7 +120,7 @@ static int mjson(const char *s, int len, mjson_cb_t cb, void *ud) {
           if (depth >= (int) sizeof(nesting)) return MJSON_ERROR_TOO_DEEP;
           nesting[depth++] = c;
           break;
-        } else if (c == ']') {
+        } else if (c == ']' && depth > 0) {  // Empty array
           MJSONEOO();
         } else if (c == 't' && i + 3 < len && memcmp(&s[i], "true", 4) == 0) {
           i += 3;
@@ -158,7 +158,7 @@ static int mjson(const char *s, int len, mjson_cb_t cb, void *ud) {
           i += n + 1;
           tok = MJSON_TOK_KEY;
           expecting = S_COLON;
-        } else if (c == '}') {
+        } else if (c == '}') {  // Empty object
           MJSONEOO();
           expecting = S_COMMA_OR_EOO;
         } else {

@@ -60,6 +60,8 @@ static void test_cb(void) {
   assert(mjson("[{},{}]", 7, NULL, NULL) == 7);
   str = "{\"a\":[{}]}";
   assert(mjson(str, 10, NULL, NULL) == 10);
+
+  assert(mjson("]", 1, NULL, NULL) == MJSON_ERROR_INVALID_INPUT);
 }
 
 static void test_find(void) {
