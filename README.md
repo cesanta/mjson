@@ -9,11 +9,11 @@ The main purpose of this library is to make it possible for ANY microcontroller
 expose its own set of functions as simple cloud RESTful endpoints.
 
 ```
-┌──────────────┐      ┌─────────────┐     ┌───────────────┐
-│ target MCU   │ UART │ bridge MCU  │ TLS │ Cloud service │
-│ e.g. Arduino ├──────┤ e.g. ESP32  ├─────┤     mDash     ├──█ REST API
-│   mjson.h    │      │ Mongoose OS │     │               │
-╰──────────────┘      ╰─────────────┘     ╰───────────────┘
+┌──────────────┐          ┌─────────────┐          ┌──────────────┐
+│ target MCU   │   UART   │ bridge MCU  │    WSS   │     dash.    │
+│ e.g. Arduino ├──────────┤ e.g. ESP32  ├──────────┤ mongoose-os. ├──█ REST
+│   mjson.h    │ json-rpc │ Mongoose OS │ json-rpc │      com     │
+╰──────────────┘          ╰─────────────┘          ╰──────────────┘
 ```
 
 - Open rpc.ino in Arduino IDE, build and flash on any Arduino
