@@ -229,7 +229,7 @@ The `version` is a firmware version passed to the `info` handler.
 ## jsonrpc_ctx_process
 
 ```c
-jsonrpc_ctx_process(&jsonrpc_default_context, buf, buf_len);
+jsonrpc_ctx_process(struct jsonrpc_ctx *, const char *buf, int buf_len);
 ```
 
 Parse JSON-RPC frame contained in `buf`, and invoke a registered handler.
@@ -237,9 +237,13 @@ Parse JSON-RPC frame contained in `buf`, and invoke a registered handler.
 
 ## jsonrpc_ctx_export
 
+```c
+#define jsonrpc_ctx_export(ctx, name, func, func_data)
+```
+
 Export JSON-RPC function. A function gets called by `jsonrpc_ctx_process()`,
 which parses an incoming frame and calls a registered handler.
-A handler function must return 0 for success, or 0 for error. It could use
+A handler function must return 0 for success, or non-0 for error. It could use
 the printing API for creating the result, or error message for error.
 
 ## JSON-RPC example implementation
