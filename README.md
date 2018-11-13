@@ -40,6 +40,7 @@ expose its own set of functions as simple cloud RESTful endpoints.
 - `-D MJSON_MAX_DEPTH=30` define max object depth, default: 20
 - `-D MJSON_ENABLE_RPC=0` disable RPC functionality, default: enabled
 - `-D MJSON_ENABLE_FS=1` enable `fs.*` file RPC service, default: disabled
+- `-D MJSON_ENABLE_BASE64=0` disable base64 parsing/printing, default: enabled
 
 # Parsing API
 
