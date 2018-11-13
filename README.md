@@ -1,6 +1,6 @@
 # mjson - a JSON parser, emitter and JSON-RPC engine for embedded systems
 
-[![Build Status](https://travis-ci.org/cpq/mjson.svg?branch=master)](https://travis-ci.org/cpq/mjson)
+[![Build Status](https://travis-ci.org/cesanta/mjson.svg?branch=master)](https://travis-ci.org/cesanta/mjson)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](https://opensource.org/licenses/MIT)
 
 # Expose ANY microcontroller to the Internet
