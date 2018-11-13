@@ -32,6 +32,10 @@
 #define MJSON_ENABLE_RPC 1
 #endif
 
+#ifndef MJSON_ENABLE_BASE64
+#define MJSON_ENABLE_BASE64 1
+#endif
+
 enum {
   MJSON_ERROR_INVALID_INPUT = -1,
   MJSON_ERROR_TOO_DEEP = -2,
@@ -314,6 +318,7 @@ int mjson_find_string(const char *s, int len, const char *path, char *to,
   return mjson_unescape(p + 1, sz - 2, to, n);
 }
 
+#if MJSON_ENABLE_BASE64
 static int mjson_base64rev(int c) {
   if (c >= 'A' && c <= 'Z') {
     return c - 'A';
@@ -356,6 +361,7 @@ int mjson_find_base64(const char *s, int len, const char *path, char *to,
   if (mjson_find(s, len, path, &p, &sz) != MJSON_TOK_STRING) return 0;
   return mjson_base64_dec(p + 1, sz - 2, to, n);
 }
+#endif // MJSON_ENABLE_BASE64
 
 #if MJSON_ENABLE_PRINT
 
@@ -452,6 +458,7 @@ int mjson_print_str(struct mjson_out *out, const char *s, int len) {
   return n + out->print(out, "\"", 1);
 }
 
+#if MJSON_ENABLE_BASE64
 int mjson_print_b64(struct mjson_out *out, const unsigned char *s, int n) {
   const char *t =
       "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
@@ -465,6 +472,7 @@ int mjson_print_b64(struct mjson_out *out, const unsigned char *s, int n) {
   }
   return len + out->print(out, "\"", 1);
 }
+#endif
 
 typedef int (*mjson_printf_fn_t)(struct mjson_out *, va_list *);
 
@@ -496,10 +504,12 @@ int mjson_vprintf(struct mjson_out *out, const char *fmt, va_list ap) {
         i += 2;
       } else if (fmt[i + 1] == 'g') {
         n += mjson_print_dbl(out, va_arg(ap, double));
+#if MJSON_ENABLE_BASE64
       } else if (fmt[i + 1] == 'V') {
         int len = va_arg(ap, int);
         const char *buf = va_arg(ap, const char *);
         n += mjson_print_b64(out, (unsigned char *) buf, len);
+#endif
       } else if (fmt[i + 1] == 'M') {
         va_list tmp;
         mjson_printf_fn_t fn;
@@ -772,59 +782,6 @@ static int rpclist(char *in, int in_len, struct mjson_out *out, void *ud) {
   (void) in_len;
   return 0;
 }
-
-#if defined(JSONRPC_OTA_ENABLE)
-#include <stdio.h>
-#include <stdlib.h>
-/*
- * Common OTA code
- */
-static int jsonrpc_rpc_ota_begin(char *in, int in_len, struct mjson_out *out,
-                                 void *userdata) {
-  struct jsonrpc_ctx *ctx = (struct jsonrpc_ctx *) userdata;
-  int r = jsonrpc_ota_begin(ctx);
-  mjson_printf(out, "%s", r == 0 ? "true" : "false");
-  return r;
-  (void) in;
-  (void) in_len;
-}
-
-static int jsonrpc_rpc_ota_end(char *in, int in_len, struct mjson_out *out,
-                               void *userdata) {
-  struct jsonrpc_ctx *ctx = (struct jsonrpc_ctx *) userdata;
-  int success = mjson_find_number(in, in_len, "$.success", -1);
-  if (success < 0) {
-    mjson_printf(out, "%Q", "bad args");
-    return JSONRPC_ERROR_BAD_PARAMS;
-  } else if (jsonrpc_ota_end(ctx, success) != 0) {
-    mjson_printf(out, "%Q", "failed");
-    return 500;
-  } else {
-    mjson_printf(out, "%s", "true");
-    return 0;
-  }
-}
-
-static int jsonrpc_rpc_ota_write(char *in, int len, struct mjson_out *out,
-                                 void *userdata) {
-  struct jsonrpc_ctx *ctx = (struct jsonrpc_ctx *) userdata;
-  char *p;
-  int n, result = 0;
-  if (mjson_find(in, len, "$", (const char **) &p, &n) != MJSON_TOK_STRING) {
-    mjson_printf(out, "%Q", "expecting base64 encoded data");
-    result = JSONRPC_ERROR_BAD_PARAMS;
-  } else {
-    int dec_len = mjson_base64_dec(p, n, p, n);
-    if (jsonrpc_ota_write(ctx, p, dec_len) != 0) {
-      mjson_printf(out, "%Q", "write failed");
-      result = 500;
-    } else {
-      mjson_printf(out, "%s", "true");
-    }
-  }
-  return result;
-}
-#endif
 
 #if MJSON_ENABLE_FS
 #include <dirent.h>
