@@ -670,10 +670,6 @@ struct jsonrpc_ctx {
     (ctx)->methods = &m;                                                    \
   } while (0)
 
-int jsonrpc_ctx_notify(struct jsonrpc_ctx *ctx, char *buf, int len) {
-  return ctx->sender == NULL ? 0 : ctx->sender(buf, len, ctx->privdata);
-}
-
 static struct jsonrpc_ctx jsonrpc_default_context = JSONRPC_CTX_INTIALIZER;
 
 #define jsonrpc_export(name, fn, ud) \
@@ -682,9 +678,18 @@ static struct jsonrpc_ctx jsonrpc_default_context = JSONRPC_CTX_INTIALIZER;
 #define jsonrpc_notify(buf, len) \
   jsonrpc_ctx_notify(&jsonrpc_default_context, (buf), (len))
 
-#define jsonrpc_loop(version, pass)                                          \
-  jsonrpc_poll(&jsonrpc_default_context, "wss://dash.freshen.cc/api/v2/rpc", \
-               (version), (pass))
+int jsonrpc_ctx_notify(struct jsonrpc_ctx *ctx, const char *fmt, ...) {
+  char *frame = NULL;
+  struct mjson_out out = MJSON_OUT_DYNAMIC_BUF(&frame);
+  va_list ap;
+  int len;
+  va_start(ap, fmt);
+  len = mjson_vprintf(&out, fmt, ap);
+  va_end(ap);
+  len = ctx->sender(frame, len, ctx->privdata);
+  free(frame);
+  return len;
+}
 
 int jsonrpc_ctx_process(struct jsonrpc_ctx *ctx, char *req, int req_sz) {
   const char *id = NULL, *params = NULL;
@@ -910,15 +915,15 @@ void jsonrpc_ctx_init(struct jsonrpc_ctx *ctx,
   ctx->sender = sender;
   ctx->privdata = senderdata;
 
-  jsonrpc_ctx_export(ctx, "sys.info", info, (void *) version);
-  jsonrpc_ctx_export(ctx, "rpc.list", rpclist, ctx);
+  jsonrpc_ctx_export(ctx, "Sys.Info", info, (void *) version);
+  jsonrpc_ctx_export(ctx, "RPC.List", rpclist, ctx);
 
 #if MJSON_ENABLE_FS
-  jsonrpc_ctx_export(ctx, "fs.list", fslist, ctx);
-  jsonrpc_ctx_export(ctx, "fs.remove", fsremove, ctx);
-  jsonrpc_ctx_export(ctx, "fs.rename", fsrename, ctx);
-  jsonrpc_ctx_export(ctx, "fs.read", fsget, ctx);
-  jsonrpc_ctx_export(ctx, "fs.write", fsput, ctx);
+  jsonrpc_ctx_export(ctx, "FS.List", fslist, ctx);
+  jsonrpc_ctx_export(ctx, "FS.Remove", fsremove, ctx);
+  jsonrpc_ctx_export(ctx, "FS.Rename", fsrename, ctx);
+  jsonrpc_ctx_export(ctx, "FS.Read", fsget, ctx);
+  jsonrpc_ctx_export(ctx, "FS.Write", fsput, ctx);
 #endif
 }
 #endif

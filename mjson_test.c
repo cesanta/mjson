@@ -322,10 +322,10 @@ static void test_rpc(void) {
   jsonrpc_ctx_init(ctx, sender, out, "1.0");
 
   {
-    // Call rpc.list
-    char request[] = "{\"id\": 1, \"method\": \"rpc.list\"}";
+    // Call RPC.List
+    char request[] = "{\"id\": 1, \"method\": \"RPC.List\"}";
     jsonrpc_ctx_process(ctx, request, strlen(request));
-    assert(strstr(out, "rpc.list") != NULL);
+    assert(strstr(out, "RPC.List") != NULL);
   }
 
   {
@@ -351,7 +351,15 @@ static void test_rpc(void) {
     const char *reply =
         "{\"error\":{\"code\":-32700,\"message\":\"malformed frame\"}}";
     jsonrpc_ctx_process(ctx, request, strlen(request));
-    printf("--> [%s]\n", out);
+    // printf("--> [%s]\n", out);
+    assert(strcmp(out, reply) == 0);
+  }
+
+  {
+    // Test notify
+    const char *reply = "{\"method\":\"ping\"}";
+    jsonrpc_ctx_notify(ctx, "{%Q:%Q}", "method", "ping");
+    // printf("--> [%s]\n", out);
     assert(strcmp(out, reply) == 0);
   }
 }
