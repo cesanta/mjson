@@ -16,7 +16,7 @@ expose its own set of functions as simple cloud RESTful endpoints.
 ╰──────────────┘          ╰─────────────┘          ╰──────────────┘
 ```
 
-- Open rpc.ino in Arduino IDE, build and flash on any Arduino
+- Open `examples/shadow.ino` in Arduino IDE, build and flash on any Arduino
 - Connect Arduino with any board (e.g. ESP8266) running
   [Mongoose OS](https://mongoose-os.com) over UART
 - Configure ESP8266 on mDash ([see docs](https://mongoose-os.com/docs/mdash/registration.md))
