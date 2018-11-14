@@ -361,7 +361,7 @@ int mjson_find_base64(const char *s, int len, const char *path, char *to,
   if (mjson_find(s, len, path, &p, &sz) != MJSON_TOK_STRING) return 0;
   return mjson_base64_dec(p + 1, sz - 2, to, n);
 }
-#endif // MJSON_ENABLE_BASE64
+#endif  // MJSON_ENABLE_BASE64
 
 #if MJSON_ENABLE_PRINT
 
@@ -698,6 +698,9 @@ int jsonrpc_ctx_process(struct jsonrpc_ctx *ctx, char *req, int req_sz) {
   /* Method must exist and must be a string. */
   if ((method_sz = mjson_find_string(req, req_sz, "$.method", method,
                                      sizeof(method))) <= 0) {
+    const char *doh =
+        "{\"error\":{\"code\":-32700,\"message\":\"malformed frame\"}}";
+    ctx->sender((char *) doh, strlen(doh), ctx->privdata);
     return JSONRPC_ERROR_INVALID;
   }
 
