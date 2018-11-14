@@ -214,12 +214,11 @@ free(s);
 
 For the example, see `unit_test.c :: test_rpc()` function.
 
-## jsonrpc_ctx_init
+## jsonrpc_init
 
-```
-void jsonrpc_ctx_init(struct jsonrpc_ctx *ctx,
-                      int (*sender)(char *, int, void *), void *senderdata,
-                      const char *version);
+```c
+void jsonrpc_init(int (*sender)(char *, int, void *), void *senderdata,
+                  const char *version);
 ```
 
 Initialize JSON-RPC context. The `sender()` function must be provided
@@ -227,19 +226,27 @@ by the caller, and it is responsible to send the prepared JSON-RPC
 reply to the remote side - to the UART, or socket, or whatever.
 The `version` is a firmware version passed to the `info` handler.
 
-## jsonrpc_ctx_process
+## jsonrpc_process
 
 ```c
-jsonrpc_ctx_process(struct jsonrpc_ctx *, const char *buf, int buf_len);
+jsonrpc_process(const char *buf, int buf_len);
 ```
 
 Parse JSON-RPC frame contained in `buf`, and invoke a registered handler.
 
-
-## jsonrpc_ctx_export
+## jsonrpc_notify
 
 ```c
-#define jsonrpc_ctx_export(ctx, name, func, func_data)
+jsonrpc_notify((const char *fmt, ...))
+```
+
+Send JSON-RPC notification. The format must create a valid frame.
+
+
+## jsonrpc_export
+
+```c
+#define jsonrpc_export(const char *name, int (*handler)(), void *handler_data)
 ```
 
 Export JSON-RPC function. A function gets called by `jsonrpc_ctx_process()`,
@@ -274,21 +281,20 @@ static int sender(char *buf, int len, void *privdata) {
 }
 
 int main(void) {
-  struct jsonrpc_ctx *ctx = &jsonrpc_default_context;
-  jsonrpc_ctx_init(ctx, sender, NULL, "1.0");
+  jsonrpc_init(sender, NULL, "1.0");
 
   // Call rpc.list
   char request1[] = "{\"id\": 1, \"method\": \"rpc.list\"}";
-  jsonrpc_ctx_process(ctx, request1, strlen(request1));
+  jsonrpc_process(request1, strlen(request1));
 
   // Call non-existent method
   char request2[] = "{\"id\": 1, \"method\": \"foo\"}";
-  jsonrpc_ctx_process(ctx, request2, strlen(request2));
+  jsonrpc_process(request2, strlen(request2));
 
   // Register our own function
   char request3[] = "{\"id\": 2, \"method\": \"foo\",\"params\":[0,1.23]}";
-  jsonrpc_ctx_export(ctx, "foo", foo, (void *) "hi");
-  jsonrpc_ctx_process(ctx, request3, strlen(request3));
+  jsonrpc_export("foo", foo, (void *) "hi");
+  jsonrpc_process(request3, strlen(request3));
 
   return 0;
 }

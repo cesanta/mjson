@@ -675,8 +675,13 @@ static struct jsonrpc_ctx jsonrpc_default_context = JSONRPC_CTX_INTIALIZER;
 #define jsonrpc_export(name, fn, ud) \
   jsonrpc_ctx_export(&jsonrpc_default_context, (name), (fn), (ud))
 
-#define jsonrpc_notify(buf, len) \
-  jsonrpc_ctx_notify(&jsonrpc_default_context, (buf), (len))
+#define jsonrpc_init(fn, ud, ver) \
+  jsonrpc_ctx_init(&jsonrpc_default_context, (fn), (ud), (ver))
+
+#define jsonrpc_notify(fmt) jsonrpc_ctx_notify(&jsonrpc_default_context, fmt)
+
+#define jsonrpc_process(buf, len) \
+  jsonrpc_ctx_process(&jsonrpc_default_context, (buf), (len))
 
 int jsonrpc_ctx_notify(struct jsonrpc_ctx *ctx, const char *fmt, ...) {
   char *frame = NULL;
