@@ -66,10 +66,10 @@ assert(mjson_find(s, len, "$.baz", &p, &n) == MJSON_TOK_TRUE);
 assert(mjson_find(s, len, "$", &p, &n) == MJSON_TOK_OBJECT);
 ```
 
-## mjson_find_number()
+## mjson_get_number()
 
 ```c
-double mjson_find_number(const char *s, int len, const char *path, double default_val);
+double mjson_get_number(const char *s, int len, const char *path, double default_val);
 ```
 
 In a JSON string `s`, `len`, return a number value by its JSONPATH `path`.
@@ -77,13 +77,13 @@ If not found, return `default_val`. Example:
 
 ```c
 // s, len is a JSON string: {"foo": { "bar": [ 1, 2, 3] }, "baz": true} 
-double v = mjson_find_number(s, len, "$.foo.bar[1]", 0);  // Assigns to 2
+double v = mjson_get_number(s, len, "$.foo.bar[1]", 0);  // Assigns to 2
 ```
 
-## mjson_find_bool()
+## mjson_get_bool()
 
 ```c
-int mjson_find_bool(const char *s, int len, const char *path, int default_val);
+int mjson_get_bool(const char *s, int len, const char *path, int default_val);
 ```
 
 In a JSON string `s`, `len`, return a value of a boolean by its JSONPATH `path`.
@@ -91,13 +91,13 @@ If not found, return `default_val`. Example:
 
 ```c
 // s, len is a JSON string: {"foo": { "bar": [ 1, 2, 3] }, "baz": true} 
-bool v = mjson_find_bool(s, len, "$.baz", false);   // Assigns to true
+bool v = mjson_get_bool(s, len, "$.baz", false);   // Assigns to true
 ```
 
-## mjson_find_string()
+## mjson_get_string()
 
 ```c
-int mjson_find_string(const char *s, int len, const char *path, char *to, int sz);
+int mjson_get_string(const char *s, int len, const char *path, char *to, int sz);
 ```
 In a JSON string `s`, `len`, find a string by its JSONPATH `path` and unescape
 it into a buffer `to`, `sz` with terminating `\0`.
@@ -107,13 +107,13 @@ If a string is found, return the length of unescaped string. Example:
 ```c
 // s, len is a JSON string [ "abc", "de\r\n" ]
 char buf[100];
-int n = mjson_find_string(s, len, "$[1]", buf, sizeof(buf));  // Assigns to 4
+int n = mjson_get_string(s, len, "$[1]", buf, sizeof(buf));  // Assigns to 4
 ```
 
-## mjson_find_base64()
+## mjson_get_base64()
 
 ```c
-int mjson_find_base64(const char *s, int len, const char *path, char *to, int sz);
+int mjson_get_base64(const char *s, int len, const char *path, char *to, int sz);
 ```
 
 In a JSON string `s`, `len`, find a string by its JSONPATH `path` and
@@ -124,7 +124,7 @@ If a string is found, return the length of decoded string. Example:
 ```c
 // s, len is a JSON string [ "MA==" ]
 char buf[100];
-int n = mjson_find_base64(s, len, "$[0]", buf, sizeof(buf));  // Assigns to 1
+int n = mjson_get_base64(s, len, "$[0]", buf, sizeof(buf));  // Assigns to 1
 ```
 
 
@@ -269,7 +269,7 @@ or whatever else.
 
 // A custom RPC handler. Many handlers can be registered.
 static int foo(char *buf, int len, struct mjson_out *out, void *userdata) {
-  double x = mjson_find_number(buf, len, "$[1]", 0);
+  double x = mjson_get_number(buf, len, "$[1]", 0);
   mjson_printf(out, "{%Q:%g,%Q:%Q}", "x", x, "ud", (char *) userdata);
   return 0;
 }

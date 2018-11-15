@@ -194,7 +194,7 @@ static int mjson(const char *s, int len, mjson_cb_t cb, void *ud) {
   return MJSON_ERROR_INVALID_INPUT;
 }
 
-struct msjon_find_data {
+struct msjon_get_data {
   const char *path;     // Lookup json path
   int pos;              // Current path index
   int d1;               // Current depth of traversal
@@ -213,8 +213,8 @@ static int mjson_plen(const char *s) {
   return i;
 }
 
-static void mjson_find_cb(int tok, const char *s, int off, int len, void *ud) {
-  struct msjon_find_data *data = (struct msjon_find_data *) ud;
+static void mjson_get_cb(int tok, const char *s, int off, int len, void *ud) {
+  struct msjon_get_data *data = (struct msjon_get_data *) ud;
   // printf("--> %2x %2d %2d %2d %2d\t'%s'\t'%.*s'\t\t'%.*s'\n", tok, data->d1,
   //        data->d2, data->i1, data->i2, data->path + data->pos, off, s, len,
   //        s + off);
@@ -269,14 +269,14 @@ static void mjson_find_cb(int tok, const char *s, int off, int len, void *ud) {
 
 enum mjson_tok mjson_find(const char *s, int len, const char *jp,
                           const char **tokptr, int *toklen) {
-  struct msjon_find_data data = {jp, 1,  0,      0,      0,
+  struct msjon_get_data data = {jp, 1,  0,      0,      0,
                                  0,  -1, tokptr, toklen, MJSON_TOK_INVALID};
   if (jp[0] != '$') return MJSON_TOK_INVALID;
-  if (mjson(s, len, mjson_find_cb, &data) < 0) return MJSON_TOK_INVALID;
+  if (mjson(s, len, mjson_get_cb, &data) < 0) return MJSON_TOK_INVALID;
   return (enum mjson_tok) data.tok;
 }
 
-double mjson_find_number(const char *s, int len, const char *path, double def) {
+double mjson_get_number(const char *s, int len, const char *path, double def) {
   const char *p;
   int n;
   double value = def;
@@ -286,7 +286,7 @@ double mjson_find_number(const char *s, int len, const char *path, double def) {
   return value;
 }
 
-int mjson_find_bool(const char *s, int len, const char *path, int dflt) {
+int mjson_get_bool(const char *s, int len, const char *path, int dflt) {
   int value = dflt, tok = mjson_find(s, len, path, NULL, NULL);
   if (tok == MJSON_TOK_TRUE) value = 1;
   if (tok == MJSON_TOK_FALSE) value = 0;
@@ -310,7 +310,7 @@ static int mjson_unescape(const char *s, int len, char *to, int n) {
   return j;
 }
 
-int mjson_find_string(const char *s, int len, const char *path, char *to,
+int mjson_get_string(const char *s, int len, const char *path, char *to,
                       int n) {
   const char *p;
   int sz;
@@ -354,7 +354,7 @@ static int mjson_base64_dec(const char *src, int n, char *dst, int dlen) {
   return len;
 }
 
-int mjson_find_base64(const char *s, int len, const char *path, char *to,
+int mjson_get_base64(const char *s, int len, const char *path, char *to,
                       int n) {
   const char *p;
   int sz;
@@ -706,7 +706,7 @@ int jsonrpc_ctx_process(struct jsonrpc_ctx *ctx, char *req, int req_sz) {
   struct mjson_out fout = MJSON_OUT_DYNAMIC_BUF(&frame);
 
   /* Method must exist and must be a string. */
-  if ((method_sz = mjson_find_string(req, req_sz, "$.method", method,
+  if ((method_sz = mjson_get_string(req, req_sz, "$.method", method,
                                      sizeof(method))) <= 0) {
     const char *doh =
         "{\"error\":{\"code\":-32700,\"message\":\"malformed frame\"}}";
@@ -826,7 +826,7 @@ static int fslist(char *in, int in_len, struct mjson_out *out, void *ud) {
 static int fsremove(char *in, int in_len, struct mjson_out *out, void *ud) {
   char fname[50];
   int result = 0;
-  if (mjson_find_string(in, in_len, "$.filename", fname, sizeof(fname)) <= 0) {
+  if (mjson_get_string(in, in_len, "$.filename", fname, sizeof(fname)) <= 0) {
     mjson_printf(out, "%Q", "filename is missing");
     result = JSONRPC_ERROR_BAD_PARAMS;
   } else if (remove(fname) != 0) {
@@ -842,8 +842,8 @@ static int fsremove(char *in, int in_len, struct mjson_out *out, void *ud) {
 static int fsrename(char *in, int in_len, struct mjson_out *out, void *ud) {
   char src[50], dst[50];
   int result = 0;
-  if (mjson_find_string(in, in_len, "$.src", src, sizeof(src)) <= 0 ||
-      mjson_find_string(in, in_len, "$.dst", dst, sizeof(dst)) <= 0) {
+  if (mjson_get_string(in, in_len, "$.src", src, sizeof(src)) <= 0 ||
+      mjson_get_string(in, in_len, "$.dst", dst, sizeof(dst)) <= 0) {
     mjson_printf(out, "%Q", "src and dst are required");
     result = JSONRPC_ERROR_BAD_PARAMS;
   } else if (rename(src, dst) != 0) {
@@ -858,11 +858,11 @@ static int fsrename(char *in, int in_len, struct mjson_out *out, void *ud) {
 
 static int fsget(char *in, int in_len, struct mjson_out *out, void *ud) {
   char fname[50], *chunk = NULL;
-  int offset = mjson_find_number(in, in_len, "$.offset", 0);
-  int len = mjson_find_number(in, in_len, "$.len", 512);
+  int offset = mjson_get_number(in, in_len, "$.offset", 0);
+  int len = mjson_get_number(in, in_len, "$.len", 512);
   int result = 0;
   FILE *fp = NULL;
-  if (mjson_find_string(in, in_len, "$.filename", fname, sizeof(fname)) <= 0) {
+  if (mjson_get_string(in, in_len, "$.filename", fname, sizeof(fname)) <= 0) {
     mjson_printf(out, "%Q", "filename is required");
     result = JSONRPC_ERROR_BAD_PARAMS;
   } else if ((chunk = (char *) malloc(len)) == NULL) {
@@ -889,10 +889,10 @@ static int fsput(char *in, int in_len, struct mjson_out *out, void *ud) {
   char fname[50], *data = NULL;
   FILE *fp = NULL;
   int n, result = 0;
-  int append = mjson_find_bool(in, in_len, "$.append", 0);
+  int append = mjson_get_bool(in, in_len, "$.append", 0);
   if (mjson_find(in, in_len, "$.data", (const char **) &data, &n) !=
           MJSON_TOK_STRING ||
-      mjson_find_string(in, in_len, "$.filename", fname, sizeof(fname)) <= 0) {
+      mjson_get_string(in, in_len, "$.filename", fname, sizeof(fname)) <= 0) {
     mjson_printf(out, "%Q", "data and filename are required");
     result = JSONRPC_ERROR_BAD_PARAMS;
   } else if ((fp = fopen(fname, append ? "ab" : "wb")) == NULL) {
