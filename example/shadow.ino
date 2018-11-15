@@ -13,8 +13,8 @@ static int on_shadow_delta(char *buf, int len, struct mjson_out *out,
                            void *userdata) {
   int on = mjson_find_bool(buf, len, "$.on", 0);  // Get {"on": true/false}
   digitalWrite(LED_BUILTIN, on);  // Turn the LED on/off, according to delta
-  jsonrpc_notify(("{%Q:%Q,%Q:{%Q:{%Q:{%Q:%s}}}}", "method", "Shadow.Update",
-                  "params", "state", "reported", "on", on ? "true" : "false"));
+  jsonrpc_notify(("{\"method\":%Q,\"params\":{\"on\":%s}}",
+                  "Shadow.Update", on ? "true" : "false"));
   return 0;  // Success
 }
 
