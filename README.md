@@ -7,7 +7,7 @@
 
 The main purpose of this library is to make it possible for ANY microcontroller
 expose its own set of functions as simple RPC endpoints available via
-UART/SPI/I2C. The bridge MCU can expose target MCU as a set of REST endpoints.
+UART/SPI/I2C. The bridge MCU can expose target MCU as a set of REST endpoints:
 ```
 ┌──────────────┐          ┌─────────────┐          ┌──────────────┐
 │ target MCU   │   UART   │ bridge MCU  │    WSS   │     dash.    │
