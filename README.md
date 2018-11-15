@@ -29,8 +29,7 @@ UART/SPI/I2C. The bridge MCU can expose target MCU as a set of REST endpoints:
 - Low level SAX API
 - High level API - fetch from JSON directly into C/C++ by
     [jsonpath](https://github.com/json-path/JsonPath)
-- Dependencies: `string.h`, `stdio.h`
-- Built-in RPC API: `rpc.list`, `sys.info`, `fs.{read,write,list,rename,remove}`
+- Built-in RPC API: `RPC.List`, `SYS.Info`
 - MIT license
 
 # Build options
@@ -39,7 +38,6 @@ UART/SPI/I2C. The bridge MCU can expose target MCU as a set of REST endpoints:
 - `-D MJSON_IMPLEMENT_STRTOD=1` use own `strtod()`, default: stdlib is used
 - `-D MJSON_MAX_DEPTH=30` define max object depth, default: 20
 - `-D MJSON_ENABLE_RPC=0` disable RPC functionality, default: enabled
-- `-D MJSON_ENABLE_FS=1` enable `fs.*` file RPC service, default: disabled
 - `-D MJSON_ENABLE_BASE64=0` disable base64 parsing/printing, default: enabled
 
 # Parsing API

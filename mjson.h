@@ -270,7 +270,7 @@ static void mjson_get_cb(int tok, const char *s, int off, int len, void *ud) {
 enum mjson_tok mjson_find(const char *s, int len, const char *jp,
                           const char **tokptr, int *toklen) {
   struct msjon_get_data data = {jp, 1,  0,      0,      0,
-                                 0,  -1, tokptr, toklen, MJSON_TOK_INVALID};
+                                0,  -1, tokptr, toklen, MJSON_TOK_INVALID};
   if (jp[0] != '$') return MJSON_TOK_INVALID;
   if (mjson(s, len, mjson_get_cb, &data) < 0) return MJSON_TOK_INVALID;
   return (enum mjson_tok) data.tok;
@@ -311,7 +311,7 @@ static int mjson_unescape(const char *s, int len, char *to, int n) {
 }
 
 int mjson_get_string(const char *s, int len, const char *path, char *to,
-                      int n) {
+                     int n) {
   const char *p;
   int sz;
   if (mjson_find(s, len, path, &p, &sz) != MJSON_TOK_STRING) return 0;
@@ -355,7 +355,7 @@ static int mjson_base64_dec(const char *src, int n, char *dst, int dlen) {
 }
 
 int mjson_get_base64(const char *s, int len, const char *path, char *to,
-                      int n) {
+                     int n) {
   const char *p;
   int sz;
   if (mjson_find(s, len, path, &p, &sz) != MJSON_TOK_STRING) return 0;
@@ -707,7 +707,7 @@ int jsonrpc_ctx_process(struct jsonrpc_ctx *ctx, char *req, int req_sz) {
 
   /* Method must exist and must be a string. */
   if ((method_sz = mjson_get_string(req, req_sz, "$.method", method,
-                                     sizeof(method))) <= 0) {
+                                    sizeof(method))) <= 0) {
     const char *doh =
         "{\"error\":{\"code\":-32700,\"message\":\"malformed frame\"}}";
     ctx->sender((char *) doh, strlen(doh), ctx->privdata);
@@ -746,14 +746,6 @@ int jsonrpc_ctx_process(struct jsonrpc_ctx *ctx, char *req, int req_sz) {
   free(res);
   return code;
 }
-
-#ifndef MJSON_ENABLE_FS
-#if defined(__APPLE__) || defined(__linux__)
-#define MJSON_ENABLE_FS 1
-#else
-#define MJSON_ENABLE_FS 0
-#endif
-#endif
 
 static int info(char *args, int len, struct mjson_out *out, void *userdata) {
 #if defined(__APPLE__)
@@ -796,124 +788,6 @@ static int rpclist(char *in, int in_len, struct mjson_out *out, void *ud) {
   return 0;
 }
 
-#if MJSON_ENABLE_FS
-#include <dirent.h>
-static int fslist(char *in, int in_len, struct mjson_out *out, void *ud) {
-  DIR *dirp;
-  mjson_print_buf(out, "[", 1);
-  if ((dirp = opendir(".")) != NULL) {
-    struct dirent *dp;
-    int i = 0;
-    while ((dp = readdir(dirp)) != NULL) {
-      /* Do not show current and parent dirs */
-      if (strcmp((const char *) dp->d_name, ".") == 0 ||
-          strcmp((const char *) dp->d_name, "..") == 0) {
-        continue;
-      }
-      if (i > 0) mjson_print_buf(out, ",", 1);
-      mjson_print_str(out, dp->d_name, strlen(dp->d_name));
-      i++;
-    }
-    closedir(dirp);
-  }
-  mjson_print_buf(out, "]", 1);
-  (void) ud;
-  (void) in;
-  (void) in_len;
-  return 0;
-}
-
-static int fsremove(char *in, int in_len, struct mjson_out *out, void *ud) {
-  char fname[50];
-  int result = 0;
-  if (mjson_get_string(in, in_len, "$.filename", fname, sizeof(fname)) <= 0) {
-    mjson_printf(out, "%Q", "filename is missing");
-    result = JSONRPC_ERROR_BAD_PARAMS;
-  } else if (remove(fname) != 0) {
-    mjson_printf(out, "%Q", "remove() failed");
-    result = -1;
-  } else {
-    mjson_printf(out, "%s", "true");
-  }
-  (void) ud;
-  return result;
-}
-
-static int fsrename(char *in, int in_len, struct mjson_out *out, void *ud) {
-  char src[50], dst[50];
-  int result = 0;
-  if (mjson_get_string(in, in_len, "$.src", src, sizeof(src)) <= 0 ||
-      mjson_get_string(in, in_len, "$.dst", dst, sizeof(dst)) <= 0) {
-    mjson_printf(out, "%Q", "src and dst are required");
-    result = JSONRPC_ERROR_BAD_PARAMS;
-  } else if (rename(src, dst) != 0) {
-    mjson_printf(out, "%Q", "rename() failed");
-    result = -1;
-  } else {
-    mjson_printf(out, "%s", "true");
-  }
-  (void) ud;
-  return result;
-}
-
-static int fsget(char *in, int in_len, struct mjson_out *out, void *ud) {
-  char fname[50], *chunk = NULL;
-  int offset = mjson_get_number(in, in_len, "$.offset", 0);
-  int len = mjson_get_number(in, in_len, "$.len", 512);
-  int result = 0;
-  FILE *fp = NULL;
-  if (mjson_get_string(in, in_len, "$.filename", fname, sizeof(fname)) <= 0) {
-    mjson_printf(out, "%Q", "filename is required");
-    result = JSONRPC_ERROR_BAD_PARAMS;
-  } else if ((chunk = (char *) malloc(len)) == NULL) {
-    mjson_printf(out, "%Q", "chunk alloc failed");
-    result = -1;
-  } else if ((fp = fopen(fname, "rb")) == NULL) {
-    mjson_printf(out, "%Q", "fopen failed");
-    result = -2;
-  } else {
-    fseek(fp, offset, SEEK_SET);
-    int n = fread(chunk, 1, len, fp);
-    fseek(fp, 0, SEEK_END);
-    int size = ftell(fp);
-    mjson_printf(out, "{%Q:%V,%Q:%d}", "data", n, chunk, "left",
-                 size - (n + offset));
-  }
-  if (chunk != NULL) free(chunk);
-  if (fp != NULL) fclose(fp);
-  (void) ud;
-  return result;
-}
-
-static int fsput(char *in, int in_len, struct mjson_out *out, void *ud) {
-  char fname[50], *data = NULL;
-  FILE *fp = NULL;
-  int n, result = 0;
-  int append = mjson_get_bool(in, in_len, "$.append", 0);
-  if (mjson_find(in, in_len, "$.data", (const char **) &data, &n) !=
-          MJSON_TOK_STRING ||
-      mjson_get_string(in, in_len, "$.filename", fname, sizeof(fname)) <= 0) {
-    mjson_printf(out, "%Q", "data and filename are required");
-    result = JSONRPC_ERROR_BAD_PARAMS;
-  } else if ((fp = fopen(fname, append ? "ab" : "wb")) == NULL) {
-    mjson_printf(out, "%Q", "fopen failed");
-    result = 500;
-  } else {
-    // Decode in-place
-    int dec_len = mjson_base64_dec(data + 1, n - 2, data, n);
-    if ((int) fwrite(data, 1, dec_len, fp) != dec_len) {
-      mjson_printf(out, "%Q", "write failed");
-      result = 500;
-    } else {
-      mjson_printf(out, "{%Q:%d}", "written", dec_len);
-    }
-  }
-  if (fp != NULL) fclose(fp);
-  (void) ud;
-  return result;
-}
-#endif
-
 void jsonrpc_ctx_init(struct jsonrpc_ctx *ctx,
                       int (*sender)(char *, int, void *), void *senderdata,
                       const char *version) {
@@ -922,13 +796,5 @@ void jsonrpc_ctx_init(struct jsonrpc_ctx *ctx,
 
   jsonrpc_ctx_export(ctx, "Sys.Info", info, (void *) version);
   jsonrpc_ctx_export(ctx, "RPC.List", rpclist, ctx);
-
-#if MJSON_ENABLE_FS
-  jsonrpc_ctx_export(ctx, "FS.List", fslist, ctx);
-  jsonrpc_ctx_export(ctx, "FS.Remove", fsremove, ctx);
-  jsonrpc_ctx_export(ctx, "FS.Rename", fsrename, ctx);
-  jsonrpc_ctx_export(ctx, "FS.Read", fsget, ctx);
-  jsonrpc_ctx_export(ctx, "FS.Write", fsput, ctx);
-#endif
 }
 #endif
