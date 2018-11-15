@@ -11,7 +11,7 @@ script: make test
 matrix:
   include:
     - os: linux
-      compiler: clang
+      compiler: msvc98
       script: make vc98
       sudo: required
       services:
