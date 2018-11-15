@@ -28,6 +28,6 @@ matrix:
         - arduino-cli core update-index
         - arduino-cli core install arduino:avr;
       script:
-        - arduino-cli sketch new $PWD/TestSketch
-        - cp $PWD/example/shadow.ino mjson.h $PWD/TestSketch
-        - arduino-cli compile --verbose --warnings all --fqbn arduino:avr:nano $PWD/TestSketch
+        - arduino-cli sketch new TestSketch
+        - cp $PWD/example/shadow.ino mjson.h $HOME/Arduino/TestSketch
+        - arduino-cli compile --verbose --warnings all --fqbn arduino:avr:nano $HOME/Arduino/TestSketch
