@@ -3,7 +3,7 @@ sudo: false
 os:
   - linux
   - osx
-  - windows
+#  - windows
 compiler:
   - clang
   - gcc
@@ -16,7 +16,6 @@ matrix:
       sudo: required
       services:
         - docker
-  include:
     - os: linux
       compiler: arduino
       sudo: required
