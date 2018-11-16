@@ -708,9 +708,8 @@ int jsonrpc_ctx_process(struct jsonrpc_ctx *ctx, char *req, int req_sz) {
   /* Method must exist and must be a string. */
   if ((method_sz = mjson_get_string(req, req_sz, "$.method", method,
                                     sizeof(method))) <= 0) {
-    const char *doh =
-        "{\"error\":{\"code\":-32700,\"message\":\"malformed frame\"}}";
-    ctx->sender((char *) doh, strlen(doh), ctx->privdata);
+    jsonrpc_ctx_notify(ctx, "{\"error\":{\"code\":-32700,\"message\":%.*Q}}",
+                       req_sz, req);
     return JSONRPC_ERROR_INVALID;
   }
 
