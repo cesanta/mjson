@@ -2,19 +2,24 @@
 
 static char in[200];
 static int in_len = 0;
+static int ledOn = 0;
 
 // Gets called by the RPC engine to send a reply frame
 static int sender(char *buf, int len, void *privdata) {
   return Serial.write(buf, len) + Serial.write('\n');
 }
 
+static void reportState(void) {
+  jsonrpc_notify("{\"method\":%Q,\"params\":{\"on\":%s}}", "Shadow.Report",
+                 ledOn ? "true" : "false");
+}
+
 // Handle device shadow delta
 static int on_shadow_delta(char *buf, int len, struct mjson_out *out,
                            void *userdata) {
-  int on = mjson_get_bool(buf, len, "$.on", 0);  // Get {"on": true/false}
-  digitalWrite(LED_BUILTIN, on);  // Turn the LED on/off, according to delta
-  jsonrpc_notify("{\"method\":%Q,\"params\":{\"on\":%s}}", "Shadow.Update",
-                  on ? "true" : "false");
+  ledOn = mjson_get_bool(buf, len, "$.on", 0);
+  digitalWrite(LED_BUILTIN, ledOn);
+  reportState();
   return 0;  // Success
 }
 
@@ -23,6 +28,7 @@ void setup() {
   jsonrpc_export("Shadow.Delta", on_shadow_delta, NULL);
   pinMode(LED_BUILTIN, OUTPUT);
   Serial.begin(9600);
+  reportState();
 }
 
 void loop() {
