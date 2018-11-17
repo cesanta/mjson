@@ -348,8 +348,7 @@ static void test_rpc(void) {
   {
     // Test for bad frame
     char request[] = "fffuuuu";
-    const char *reply =
-        "{\"error\":{\"code\":-32700,\"message\":\"malformed frame\"}}";
+    const char *reply = "{\"error\":{\"code\":-32700,\"message\":\"fffuuuu\"}}";
     jsonrpc_ctx_process(ctx, request, strlen(request));
     // printf("--> [%s]\n", out);
     assert(strcmp(out, reply) == 0);
