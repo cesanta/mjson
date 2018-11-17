@@ -678,7 +678,10 @@ static struct jsonrpc_ctx jsonrpc_default_context = JSONRPC_CTX_INTIALIZER;
 #define jsonrpc_init(fn, ud, ver) \
   jsonrpc_ctx_init(&jsonrpc_default_context, (fn), (ud), (ver))
 
-#define jsonrpc_notify(fmt) jsonrpc_ctx_notify(&jsonrpc_default_context, fmt)
+#if !defined(_MSC_VER) || _MSC_VER >= 1700
+#define jsonrpc_notify(fmt, ...) \
+  jsonrpc_ctx_notify(&jsonrpc_default_context, fmt, __VA_ARGS__)
+#endif
 
 #define jsonrpc_process(buf, len) \
   jsonrpc_ctx_process(&jsonrpc_default_context, (buf), (len))
