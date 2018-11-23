@@ -307,11 +307,14 @@ static int foo(char *buf, int len, struct mjson_out *out, void *userdata) {
 }
 
 #define OUTLEN 200
-static int sender(char *buf, int len, void *privdata) {
+static int sender(const char *buf, int len, void *privdata) {
   char *dst = (char *) privdata;
-  memmove(dst, buf, len > OUTLEN ? OUTLEN : len);
-  dst[len > OUTLEN ? OUTLEN : len] = '\0';
+  snprintf(dst + strlen(dst), OUTLEN - strlen(dst), "%.*s", len, buf);
   return len;
+}
+
+static void process_str(struct jsonrpc_ctx *ctx, const char *str) {
+  while (str && *str != '\0') jsonrpc_ctx_process_byte(ctx, *str++);
 }
 
 static void test_rpc(void) {
@@ -323,40 +326,42 @@ static void test_rpc(void) {
 
   {
     // Call RPC.List
-    char request[] = "{\"id\": 1, \"method\": \"RPC.List\"}";
-    jsonrpc_ctx_process(ctx, request, strlen(request));
+    out[0] = '\0';
+    process_str(ctx, "{\"id\": 1, \"method\": \"RPC.List\"}\n");
     assert(strstr(out, "RPC.List") != NULL);
   }
 
   {
     // Call non-existent method
-    char request[] = "{\"id\": 1, \"method\": \"foo\"}";
-    jsonrpc_ctx_process(ctx, request, strlen(request));
+    out[0] = '\0';
+    process_str(ctx, "{\"id\": 1, \"method\": \"foo\"}\n");
     assert(strstr(out, "-32601") != NULL);
   }
 
   {
     // Register our own function
-    char request[] = "{\"id\": 2, \"method\": \"foo\",\"params\":[0,1.23]}";
-    const char *reply = "{\"id\":2,\"result\":{\"x\":1.23,\"ud\":\"hi\"}}";
+    const char *req = "{\"id\": 2, \"method\": \"foo\",\"params\":[0,1.23]}\n";
+    const char *reply = "{\"id\":2,\"result\":{\"x\":1.23,\"ud\":\"hi\"}}\n";
     jsonrpc_ctx_export(ctx, "foo", foo, (void *) "hi");
-    jsonrpc_ctx_process(ctx, request, strlen(request));
-    // printf("--> [%s]\n", out);
+    out[0] = '\0';
+    process_str(ctx, req);
     assert(strcmp(out, reply) == 0);
   }
 
   {
     // Test for bad frame
-    char request[] = "fffuuuu";
-    const char *reply = "{\"error\":{\"code\":-32700,\"message\":\"fffuuuu\"}}";
-    jsonrpc_ctx_process(ctx, request, strlen(request));
+    char request[] = "boo\n";
+    const char *reply = "{\"error\":{\"code\":-32700,\"message\":\"boo\"}}\n";
+    out[0] = '\0';
+    process_str(ctx, request);
     // printf("--> [%s]\n", out);
     assert(strcmp(out, reply) == 0);
   }
 
   {
     // Test notify
-    const char *reply = "{\"method\":\"ping\"}";
+    const char *reply = "{\"method\":\"ping\"}\n";
+    out[0] = '\0';
     jsonrpc_ctx_notify(ctx, "{%Q:%Q}", "method", "ping");
     // printf("--> [%s]\n", out);
     assert(strcmp(out, reply) == 0);

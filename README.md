@@ -18,8 +18,9 @@
 - `-D MJSON_ENABLE_PRINT=0` disable emitting functionality, default: enabled
 - `-D MJSON_IMPLEMENT_STRTOD=1` use own `strtod()`, default: stdlib is used
 - `-D MJSON_MAX_DEPTH=30` define max object depth, default: 20
-- `-D MJSON_ENABLE_RPC=0` disable RPC functionality, default: enabled
 - `-D MJSON_ENABLE_BASE64=0` disable base64 parsing/printing, default: enabled
+- `-D MJSON_ENABLE_RPC=0` disable RPC functionality, default: enabled
+- `-D MJSON_RPC_IN_BUF_SIZE=512` sets JSON-RPC input buffer size, default: 256
 
 # Parsing API
 

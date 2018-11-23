@@ -5,9 +5,11 @@ static int in_len = 0;
 static int ledOn = 0;
 
 // Gets called by the RPC engine to send a reply frame
-static int sender(char *buf, int len, void *privdata) {
-  return Serial.write(buf, len) + Serial.write('\n');
+static int sender(const char *buf, int len, void *privdata) {
+  return Serial.write(buf, len);
 }
+
+static int receiver(void *privdata) { return Serial.read(); }
 
 static void reportState(void) {
   jsonrpc_notify("{\"method\":%Q,\"params\":{\"on\":%s}}", "Shadow.Report",
@@ -33,11 +35,14 @@ void setup() {
 
 void loop() {
   if (Serial.available() > 0) {
-    if (in_len >= sizeof(in)) in_len = 0;  // On overflow, wrap
-    in[in_len++] = Serial.read();  // Read from the UART, append to the buffer
+    if (in_len >= sizeof(in)) in_len = 0;  // On buffer overflow, reset buffer
+    in[in_len++] = Serial.read();          // Read char, append to the buffer
     if (in[in_len - 1] == '\n') {  // If that was a new line, parse frame
-      if (in_len > 1) jsonrpc_process(in, in_len);  // Handle frame
-      in_len = 0;                                   // Reset input buffer
+      if (in_len > 1) {
+        jsonrpc_process(in, in_len);  // Handle request, send response frame
+        Serial.write('\n');           // Send newline after the response frame
+      }
+      in_len = 0;  // Reset buffer
     }
   }
 }

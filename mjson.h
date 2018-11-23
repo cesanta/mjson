@@ -36,6 +36,10 @@
 #define MJSON_ENABLE_BASE64 1
 #endif
 
+#ifndef MJSON_RPC_IN_BUF_SIZE
+#define MJSON_RPC_IN_BUF_SIZE 256
+#endif
+
 enum {
   MJSON_ERROR_INVALID_INPUT = -1,
   MJSON_ERROR_TOO_DEEP = -2,
@@ -656,11 +660,15 @@ struct jsonrpc_method {
 struct jsonrpc_ctx {
   struct jsonrpc_method *methods;
   void *privdata;
-  int (*sender)(char *buf, int len, void *privdata);
+  int (*sender)(const char *buf, int len, void *privdata);
+  int in_len;
+  char in[MJSON_RPC_IN_BUF_SIZE];
 };
 
 #define JSONRPC_CTX_INTIALIZER \
-  { NULL, NULL, NULL }
+  {                            \
+    NULL, NULL, NULL, 0, { 0 } \
+  }
 
 /* Registers function fn under the given name within the given RPC context */
 #define jsonrpc_ctx_export(ctx, name, fn, ud)                               \
@@ -688,15 +696,20 @@ static struct jsonrpc_ctx jsonrpc_default_context = JSONRPC_CTX_INTIALIZER;
 #define jsonrpc_process(buf, len) \
   jsonrpc_ctx_process(&jsonrpc_default_context, (buf), (len))
 
+#define jsonrpc_process_byte(x) \
+  jsonrpc_ctx_process_byte(&jsonrpc_default_context, (x))
+
 int jsonrpc_ctx_notify(struct jsonrpc_ctx *ctx, const char *fmt, ...) {
   char *frame = NULL;
   struct mjson_out out = MJSON_OUT_DYNAMIC_BUF(&frame);
   va_list ap;
   int len;
+  char ch = '\n';
   va_start(ap, fmt);
   len = mjson_vprintf(&out, fmt, ap);
   va_end(ap);
   len = ctx->sender(frame, len, ctx->privdata);
+  ctx->sender(&ch, 1, ctx->privdata);
   free(frame);
   return len;
 }
@@ -715,6 +728,7 @@ int jsonrpc_ctx_process(struct jsonrpc_ctx *ctx, char *req, int req_sz) {
                                     sizeof(method))) <= 0) {
     jsonrpc_ctx_notify(ctx, "{\"error\":{\"code\":-32700,\"message\":%.*Q}}",
                        req_sz, req);
+    ctx->in_len = 0;
     return JSONRPC_ERROR_INVALID;
   }
 
@@ -731,10 +745,10 @@ int jsonrpc_ctx_process(struct jsonrpc_ctx *ctx, char *req, int req_sz) {
         free(res);
         return code;
       } else if (code == 0) {
-        mjson_printf(&fout, "{%Q:%.*s,%Q:%s}", "id", id_sz, id, "result",
+        mjson_printf(&fout, "{%Q:%.*s,%Q:%s}\n", "id", id_sz, id, "result",
                      res == NULL ? "null" : res);
       } else {
-        mjson_printf(&fout, "{%Q:%.*s,%Q:{%Q:%d,%Q:%s}}", "id", id_sz, id,
+        mjson_printf(&fout, "{%Q:%.*s,%Q:{%Q:%d,%Q:%s}}\n", "id", id_sz, id,
                      "error", "code", code, "message",
                      res == NULL ? "null" : res);
       }
@@ -742,8 +756,8 @@ int jsonrpc_ctx_process(struct jsonrpc_ctx *ctx, char *req, int req_sz) {
     }
   }
   if (m == NULL) {
-    mjson_printf(&fout, "{%Q:%.*s,%Q:{%Q:%d,%Q:%Q}}", "id", id_sz, id, "error",
-                 "code", code, "message", "method not found");
+    mjson_printf(&fout, "{%Q:%.*s,%Q:{%Q:%d,%Q:%Q}}\n", "id", id_sz, id,
+                 "error", "code", code, "message", "method not found");
   }
   ctx->sender(frame, strlen(frame), ctx->privdata);
   free(frame);
@@ -793,12 +807,23 @@ static int rpclist(char *in, int in_len, struct mjson_out *out, void *ud) {
 }
 
 void jsonrpc_ctx_init(struct jsonrpc_ctx *ctx,
-                      int (*sender)(char *, int, void *), void *senderdata,
+                      int (*sender)(const char *, int, void *), void *privdata,
                       const char *version) {
   ctx->sender = sender;
-  ctx->privdata = senderdata;
+  ctx->privdata = privdata;
 
   jsonrpc_ctx_export(ctx, "Sys.Info", info, (void *) version);
   jsonrpc_ctx_export(ctx, "RPC.List", rpclist, ctx);
+}
+
+void jsonrpc_ctx_process_byte(struct jsonrpc_ctx *ctx, unsigned char ch) {
+  if (ctx->in_len >= (int) sizeof(ctx->in)) ctx->in_len = 0;  // Overflow
+  if (ch == '\n') {  // If new line, parse frame
+    if (ctx->in_len > 1) jsonrpc_ctx_process(ctx, ctx->in, ctx->in_len);
+    ctx->in_len = 0;
+  } else {
+    ctx->in[ctx->in_len] = ch;  // Append to the buffer
+    ctx->in_len++;
+  }
 }
 #endif
