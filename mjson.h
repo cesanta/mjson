@@ -438,9 +438,9 @@ int mjson_print_int(struct mjson_out *out, int value) {
   return out->print(out, buf, len);
 }
 
-int mjson_print_dbl(struct mjson_out *out, double d) {
+int mjson_print_dbl(struct mjson_out *out, double d, const char *fmt) {
   char buf[40];
-  int n = snprintf(buf, sizeof(buf), "%g", d);
+  int n = snprintf(buf, sizeof(buf), fmt, d);
   return out->print(out, buf, n);
 }
 
@@ -503,7 +503,9 @@ int mjson_vprintf(struct mjson_out *out, const char *fmt, va_list ap) {
         n += mjson_print_buf(out, buf, len);
         i += 2;
       } else if (fmt[i + 1] == 'g') {
-        n += mjson_print_dbl(out, va_arg(ap, double));
+        n += mjson_print_dbl(out, va_arg(ap, double), "%g");
+      } else if (fmt[i + 1] == 'f') {
+        n += mjson_print_dbl(out, va_arg(ap, double), "%f");
 #if MJSON_ENABLE_BASE64
       } else if (fmt[i + 1] == 'V') {
         int len = va_arg(ap, int);
