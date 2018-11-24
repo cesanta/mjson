@@ -6,12 +6,11 @@
 # Features
 
 - Tiny footprint, single-header ISO C / ISO C++ library
-- State machine based parser, no allocations, no recursion
-- Low level SAX API
+- State machine parser, no allocations, no recursio
 - High level API - fetch from JSON directly into C/C++ by
     [jsonpath](https://github.com/json-path/JsonPath)
-- Built-in RPC API: `RPC.List`, `SYS.Info`
-- MIT license
+- Low level SAX API
+- Flexible JSON generation API - print to buffer, file, socket, etc
 
 # Build options
 
@@ -197,13 +196,23 @@ For the example, see `unit_test.c :: test_rpc()` function.
 ## jsonrpc_init
 
 ```c
-void jsonrpc_init(int (*sender)(char *, int, void *), void *senderdata,
+void jsonrpc_init(int (*sender)(char *, int, void *),
+                  int (*response_cb)(char *, int, void *),
+                  void *privdata,
                   const char *version);
 ```
 
 Initialize JSON-RPC context. The `sender()` function must be provided
 by the caller, and it is responsible to send the prepared JSON-RPC
 reply to the remote side - to the UART, or socket, or whatever.
+The `sender()` function receives the full frame to send, and the `privdata`
+poitner.
+
+The `response_cb()` function could be left NULL. If it is non-NULL, it will
+be called for all received responses generate by the `jsonrpc_call()`
+The `response_cb()` function receives full response frame, and the `privdata`
+pointer.
+
 The `version` is a firmware version passed to the `info` handler.
 
 ## jsonrpc_process
@@ -214,13 +223,15 @@ jsonrpc_process(const char *buf, int buf_len);
 
 Parse JSON-RPC frame contained in `buf`, and invoke a registered handler.
 
-## jsonrpc_notify
+## jsonrpc_call
 
 ```c
-jsonrpc_notify((const char *fmt, ...))
+jsonrpc_call((const char *fmt, ...))
 ```
 
-Send JSON-RPC notification. The format must create a valid frame.
+Send JSON-RPC call frame. The format must create a valid frame.
+If the `id` is specified in the frame, then it'll generate a response frame.
+When a response frame gets received, a 
 
 
 ## jsonrpc_export
@@ -261,7 +272,7 @@ static int sender(char *buf, int len, void *privdata) {
 }
 
 int main(void) {
-  jsonrpc_init(sender, NULL, "1.0");
+  jsonrpc_init(sender, NULL, NULL, "1.0");
 
   // Call rpc.list
   char request1[] = "{\"id\": 1, \"method\": \"rpc.list\"}";
@@ -299,8 +310,8 @@ static int sum(char *buf, int len, struct mjson_out *out, void *userdata) {
 }
 
 void setup() {
-  jsonrpc_init(sender, NULL, "1.0");    // Initialise the library
-  jsonrpc_export("Sum", sum, NULL);     // Export "Sum" function
+  jsonrpc_init(sender, NULL, NULL,  "1.0"); // Initialise the library
+  jsonrpc_export("Sum", sum, NULL);         // Export "Sum" function
   Serial.begin(9600);
 }
 

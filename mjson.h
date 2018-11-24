@@ -661,13 +661,14 @@ struct jsonrpc_ctx {
   struct jsonrpc_method *methods;
   void *privdata;
   int (*sender)(const char *buf, int len, void *privdata);
+  void (*response_cb)(const char *buf, int len, void *privdata);
   int in_len;
   char in[MJSON_RPC_IN_BUF_SIZE];
 };
 
-#define JSONRPC_CTX_INTIALIZER \
-  {                            \
-    NULL, NULL, NULL, 0, { 0 } \
+#define JSONRPC_CTX_INTIALIZER       \
+  {                                  \
+    NULL, NULL, NULL, NULL, 0, { 0 } \
   }
 
 /* Registers function fn under the given name within the given RPC context */
@@ -686,8 +687,8 @@ static struct jsonrpc_ctx jsonrpc_default_context = JSONRPC_CTX_INTIALIZER;
   jsonrpc_ctx_export(&jsonrpc_default_context, (name), (fn), (ud))
 
 #if !defined(_MSC_VER) || _MSC_VER >= 1700
-#define jsonrpc_notify(fmt, ...) \
-  jsonrpc_ctx_notify(&jsonrpc_default_context, fmt, __VA_ARGS__)
+#define jsonrpc_call(fmt, ...) \
+  jsonrpc_ctx_call(&jsonrpc_default_context, fmt, __VA_ARGS__)
 #endif
 
 #define jsonrpc_process(buf, len) \
@@ -696,7 +697,7 @@ static struct jsonrpc_ctx jsonrpc_default_context = JSONRPC_CTX_INTIALIZER;
 #define jsonrpc_process_byte(x) \
   jsonrpc_ctx_process_byte(&jsonrpc_default_context, (x))
 
-int jsonrpc_ctx_notify(struct jsonrpc_ctx *ctx, const char *fmt, ...) {
+int jsonrpc_ctx_call(struct jsonrpc_ctx *ctx, const char *fmt, ...) {
   char *frame = NULL;
   struct mjson_out out = MJSON_OUT_DYNAMIC_BUF(&frame);
   va_list ap;
@@ -712,24 +713,34 @@ int jsonrpc_ctx_notify(struct jsonrpc_ctx *ctx, const char *fmt, ...) {
 }
 
 int jsonrpc_ctx_process(struct jsonrpc_ctx *ctx, char *req, int req_sz) {
-  const char *id = NULL, *params = NULL;
+  const char *id = NULL, *params = NULL, *result = NULL;
   char method[50];
-  int id_sz = 0, method_sz = 0, params_sz = 0, code = JSONRPC_ERROR_NOT_FOUND;
+  int id_sz = 0, method_sz = 0, result_sz = 0, params_sz = 0;
+  int code = JSONRPC_ERROR_NOT_FOUND;
   struct jsonrpc_method *m;
   char *res = NULL, *frame = NULL;
   struct mjson_out rout = MJSON_OUT_DYNAMIC_BUF(&res);
   struct mjson_out fout = MJSON_OUT_DYNAMIC_BUF(&frame);
 
-  /* Method must exist and must be a string. */
+  // Is is a response frame?
+  mjson_find(req, req_sz, "$.result", &result, &result_sz);
+  if (result != NULL && result_sz > 0) {
+    if (ctx->response_cb != NULL) {
+      ctx->response_cb(req, req_sz, ctx->privdata);
+    }
+    return 0;
+  }
+
+  // Method must exist and must be a string
   if ((method_sz = mjson_get_string(req, req_sz, "$.method", method,
                                     sizeof(method))) <= 0) {
-    jsonrpc_ctx_notify(ctx, "{\"error\":{\"code\":-32700,\"message\":%.*Q}}",
-                       req_sz, req);
+    jsonrpc_ctx_call(ctx, "{\"error\":{\"code\":-32700,\"message\":%.*Q}}",
+                     req_sz, req);
     ctx->in_len = 0;
     return JSONRPC_ERROR_INVALID;
   }
 
-  /* id and params are optional. */
+  // id and params are optional
   mjson_find(req, req_sz, "$.id", &id, &id_sz);
   mjson_find(req, req_sz, "$.params", &params, &params_sz);
 
@@ -738,7 +749,7 @@ int jsonrpc_ctx_process(struct jsonrpc_ctx *ctx, char *req, int req_sz) {
       if (params == NULL) params = "";
       code = m->cb((char *) params, params_sz, &rout, m->cbdata);
       if (id == NULL) {
-        /* No id, not sending any reply. */
+        // No id, not sending any reply
         free(res);
         return code;
       } else if (code == 0) {
@@ -804,9 +815,11 @@ static int rpclist(char *in, int in_len, struct mjson_out *out, void *ud) {
 }
 
 void jsonrpc_ctx_init(struct jsonrpc_ctx *ctx,
-                      int (*sender)(const char *, int, void *), void *privdata,
-                      const char *version) {
-  ctx->sender = sender;
+                      int (*send_cb)(const char *, int, void *),
+                      void (*response_cb)(const char *, int, void *),
+                      void *privdata, const char *version) {
+  ctx->sender = send_cb;
+  ctx->response_cb = response_cb;
   ctx->privdata = privdata;
 
   jsonrpc_ctx_export(ctx, "Sys.Info", info, (void *) version);
@@ -824,8 +837,10 @@ void jsonrpc_ctx_process_byte(struct jsonrpc_ctx *ctx, unsigned char ch) {
   }
 }
 
-void jsonrpc_init(int (*sender)(const char *, int, void *), void *privdata,
-                  const char *version) {
-  jsonrpc_ctx_init(&jsonrpc_default_context, sender, privdata, version);
+void jsonrpc_init(int (*sender)(const char *, int, void *),
+                  void (*response_cb)(const char *, int, void *),
+                  void *privdata, const char *version) {
+  jsonrpc_ctx_init(&jsonrpc_default_context, sender, response_cb, privdata,
+                   version);
 }
 #endif

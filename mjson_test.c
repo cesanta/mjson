@@ -317,12 +317,16 @@ static void process_str(struct jsonrpc_ctx *ctx, const char *str) {
   while (str && *str != '\0') jsonrpc_ctx_process_byte(ctx, *str++);
 }
 
+static void response_cb(const char *buf, int len, void *privdata) {
+  snprintf((char *) privdata, OUTLEN, ">>%.*s<<", len, buf);
+}
+
 static void test_rpc(void) {
   struct jsonrpc_ctx *ctx = &jsonrpc_default_context;
   char out[OUTLEN + 1];
 
   // Init context
-  jsonrpc_ctx_init(ctx, sender, out, "1.0");
+  jsonrpc_ctx_init(ctx, sender, response_cb, out, "1.0");
 
   {
     // Call RPC.List
@@ -362,9 +366,17 @@ static void test_rpc(void) {
     // Test notify
     const char *reply = "{\"method\":\"ping\"}\n";
     out[0] = '\0';
-    jsonrpc_ctx_notify(ctx, "{%Q:%Q}", "method", "ping");
+    jsonrpc_ctx_call(ctx, "{%Q:%Q}", "method", "ping");
     // printf("--> [%s]\n", out);
     assert(strcmp(out, reply) == 0);
+  }
+
+  {
+    // Test call / response
+    out[0] = '\0';
+    process_str(ctx, "{\"id\":123,\"result\":777}\n");
+    // printf("--> [%s]\n", out);
+    assert(strcmp(out, ">>{\"id\":123,\"result\":777}<<") == 0);
   }
 }
 
@@ -375,7 +387,7 @@ int main() {
   test_get_bool();
   test_get_string();
   test_print();
-  test_printf();
   test_rpc();
+  test_printf();
   return 0;
 }
