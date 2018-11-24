@@ -685,9 +685,6 @@ static struct jsonrpc_ctx jsonrpc_default_context = JSONRPC_CTX_INTIALIZER;
 #define jsonrpc_export(name, fn, ud) \
   jsonrpc_ctx_export(&jsonrpc_default_context, (name), (fn), (ud))
 
-#define jsonrpc_init(fn, ud, ver) \
-  jsonrpc_ctx_init(&jsonrpc_default_context, (fn), (ud), (ver))
-
 #if !defined(_MSC_VER) || _MSC_VER >= 1700
 #define jsonrpc_notify(fmt, ...) \
   jsonrpc_ctx_notify(&jsonrpc_default_context, fmt, __VA_ARGS__)
@@ -825,5 +822,10 @@ void jsonrpc_ctx_process_byte(struct jsonrpc_ctx *ctx, unsigned char ch) {
     ctx->in[ctx->in_len] = ch;  // Append to the buffer
     ctx->in_len++;
   }
+}
+
+void jsonrpc_init(int (*sender)(const char *, int, void *), void *privdata,
+                  const char *version) {
+  jsonrpc_ctx_init(&jsonrpc_default_context, sender, privdata, version);
 }
 #endif
