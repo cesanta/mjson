@@ -234,7 +234,7 @@ which parses an incoming frame and calls a registered handler.
 A handler function must return 0 for success, or non-0 for error. It could use
 the printing API for creating the result, or error message for error.
 
-## JSON-RPC example implementation
+## JSON-RPC example
 
 In the following example, we initialize JSON-RPC context, and call
 a couple of JSON-RPC methods: a built-in `rpc.list` method which lists
@@ -279,6 +279,42 @@ int main(void) {
   return 0;
 }
 ```
+
+## JSON-RPC Arduino example
+
+```c
+#include "mjson.h"  // Sketch -> Add file -> add mjson.h
+
+// Gets called by the RPC engine to send a reply frame
+static int sender(const char *buf, int len, void *privdata) {
+  return Serial.write(buf, len);
+}
+
+// RPC handler for "Sum". Expect an array of two integers in "params"
+static int sum(char *buf, int len, struct mjson_out *out, void *userdata) {
+  int a = mjson_get_number(buf, len, "$[0]", 0);
+  int b = mjson_get_number(buf, len, "$[1]", 0);
+  mjson_printf(out, "%d", a + b);  // Construct the "result" frame field
+  return 0;  // Success
+}
+
+void setup() {
+  jsonrpc_init(sender, NULL, "1.0");    // Initialise the library
+  jsonrpc_export("Sum", sum, NULL);     // Export "Sum" function
+  Serial.begin(9600);
+}
+
+void loop() {
+  if (Serial.available() > 0) jsonrpc_process_byte(Serial.read());
+}
+```
+
+When this sketch is compiled and flashed on an Arduino
+board, start Arduino Serial Monitor, type
+`{"id": 1, "method": "Sum", "params": [2,3]}` and hit enter. You should
+see an answer frame:
+
+![](example/rpc1.png)
 
 # Example - expose ANY microcontroller to the Internet
 
