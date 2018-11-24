@@ -373,10 +373,11 @@ static void test_rpc(void) {
 
   {
     // Test call / response
+    const char *expected = ">>{\"id\":123,\"result\":777}<<";
     out[0] = '\0';
     process_str(ctx, "{\"id\":123,\"result\":777}\n");
     // printf("--> [%s]\n", out);
-    assert(strcmp(out, ">>{\"id\":123,\"result\":777}<<") == 0);
+    assert(strcmp(out, expected) == 0);
   }
 }
 
