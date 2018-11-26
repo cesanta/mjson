@@ -218,10 +218,10 @@ The `version` is a firmware version passed to the `info` handler.
 ## jsonrpc_process
 
 ```c
-jsonrpc_process(const char *buf, int buf_len);
+jsonrpc_process(const char *frame, int frame_len);
 ```
 
-Parse JSON-RPC frame contained in `buf`, and invoke a registered handler.
+Parse JSON-RPC frame contained in `frame`, and invoke a registered handler.
 
 ## jsonrpc_call
 
@@ -238,7 +238,7 @@ When a response frame gets received, a
 
 ```c
 #define jsonrpc_export(const char *name,
-                       int (*handler)(const char *buf, int len, struct mjson_out *, void *),
+                       int (*handler)(const char *params, int params_len, struct mjson_out *, void *),
                        void *handler_data)
 ```
 
@@ -263,16 +263,16 @@ or whatever else.
 #include "mjson.h"
 
 // A custom RPC handler. Many handlers can be registered.
-static int foo(char *buf, int len, struct mjson_out *out, void *userdata) {
-  double x = mjson_get_number(buf, len, "$[1]", 0);
+static int foo(char *params, int params_len, struct mjson_out *out, void *userdata) {
+  double x = mjson_get_number(params, params_len, "$[1]", 0);
   mjson_printf(out, "{%Q:%g,%Q:%Q}", "x", x, "ud", (char *) userdata);
   return 0;
 }
 
 // Sender function receives a reply frame and must forward it to the peer.
-static int sender(char *buf, int len, void *privdata) {
-  printf("%.*s\n", len, buf); // Print the JSON-RPC reply to stdout
-  return len;
+static int sender(char *frame, int frame_len, void *privdata) {
+  printf("%.*s\n", frame_len, frame); // Print the JSON-RPC reply to stdout
+  return frame_len;
 }
 
 int main(void) {
@@ -301,14 +301,14 @@ int main(void) {
 #include "mjson.h"  // Sketch -> Add file -> add mjson.h
 
 // Gets called by the RPC engine to send a reply frame
-static int sender(const char *buf, int len, void *privdata) {
-  return Serial.write(buf, len);
+static int sender(const char *frame, int frame_len, void *privdata) {
+  return Serial.write(frame, frame_len);
 }
 
 // RPC handler for "Sum". Expect an array of two integers in "params"
-static int sum(char *buf, int len, struct mjson_out *out, void *userdata) {
-  int a = mjson_get_number(buf, len, "$[0]", 0);
-  int b = mjson_get_number(buf, len, "$[1]", 0);
+static int sum(char *params, int params_len, struct mjson_out *out, void *userdata) {
+  int a = mjson_get_number(params, params_len, "$[0]", 0);
+  int b = mjson_get_number(params, params_len, "$[1]", 0);
   mjson_printf(out, "%d", a + b);  // Construct the "result" frame field
   return 0;  // Success
 }
