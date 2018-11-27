@@ -22,7 +22,7 @@ void setup() {
   }, NULL);
 
   pinMode(LED_BUILTIN, OUTPUT);   // Configure LED pin
-  Serial.begin(9600);             // Init serial comms
+  Serial.begin(115200);           // Init serial comms
   reportState();                  // Let shadow know our state
 }
 

@@ -316,7 +316,7 @@ static int sum(char *params, int params_len, struct mjson_out *out, void *userda
 void setup() {
   jsonrpc_init(sender, NULL, NULL,  "1.0"); // Initialise the library
   jsonrpc_export("Sum", sum, NULL);         // Export "Sum" function
-  Serial.begin(9600);
+  Serial.begin(115200);                     // Setup serial port
 }
 
 void loop() {
