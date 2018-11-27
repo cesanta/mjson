@@ -26,6 +26,11 @@ void setup() {
   reportState();                  // Let shadow know our state
 }
 
+// static int uptime = 0;   // Time after last reboot in seconds
 void loop() {
   if (Serial.available() > 0) jsonrpc_process_byte(Serial.read());
+  // if (millis() / 1000 > uptime) {
+  //   uptime = millis() / 1000;
+  //   jsonrpc_call("{\"method\":\"Shadow.Report\",\"params\":{\"uptime\":%d}}", uptime);
+  // }
 }
