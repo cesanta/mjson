@@ -297,10 +297,9 @@ or whatever else.
 #include "mjson.h"
 
 // A custom RPC handler. Many handlers can be registered.
-static int foo(char *params, int params_len, struct mjson_out *out, void *userdata) {
-  double x = mjson_get_number(params, params_len, "$[1]", 0);
-  mjson_printf(out, "{%Q:%g,%Q:%Q}", "x", x, "ud", (char *) userdata);
-  return 0;
+static void foo(struct jsonrpc_request *r) {
+  double x = mjson_get_number(r->params, r->params_len, "$[1]", 0);
+  jsonrpc_return_success(r, "{%Q:%g,%Q:%Q}", "x", x, "ud", r-userdata);
 }
 
 // Sender function receives a reply frame and must forward it to the peer.
@@ -340,11 +339,10 @@ static int sender(const char *frame, int frame_len, void *privdata) {
 }
 
 // RPC handler for "Sum". Expect an array of two integers in "params"
-static int sum(char *params, int params_len, struct mjson_out *out, void *userdata) {
-  int a = mjson_get_number(params, params_len, "$[0]", 0);
-  int b = mjson_get_number(params, params_len, "$[1]", 0);
-  mjson_printf(out, "%d", a + b);  // Construct the "result" frame field
-  return 0;  // Success
+static void sum(struct jsonrpc_request *r) {
+  int a = mjson_get_number(r->params, r->params_len, "$[0]", 0);
+  int b = mjson_get_number(r->params, r->params_len, "$[1]", 0);
+  jsonrpc_return_success(r, "%d", a + b);
 }
 
 void setup() {
