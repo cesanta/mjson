@@ -730,11 +730,13 @@ void jsonrpc_return_error(struct jsonrpc_request *r, int code,
   va_list ap;
   if (r->id_len == 0) return;
   va_start(ap, message_fmt);
-  mjson_printf(r->out, "{\"id\":%.*s,\"error\":{\"code\":%d", r->id_len, r->id,
-               code);
+  mjson_printf(r->out,
+               "{\"id\":%.*s,\"error\":{\"code\":%d,\"message\":", r->id_len,
+               r->id, code);
   if (message_fmt != NULL) {
-    mjson_printf(r->out, "%s", ",\"message\":");
     mjson_vprintf(r->out, message_fmt, ap);
+  } else {
+    mjson_printf(r->out, "%s", "\"\"");
   }
   mjson_printf(r->out, "}}\n");
   va_end(ap);
@@ -745,10 +747,11 @@ void jsonrpc_return_success(struct jsonrpc_request *r, const char *result_fmt,
   va_list ap;
   if (r->id_len == 0) return;
   va_start(ap, result_fmt);
-  mjson_printf(r->out, "{\"id\":%.*s", r->id_len, r->id);
+  mjson_printf(r->out, "{\"id\":%.*s,\"result\":", r->id_len, r->id);
   if (result_fmt != NULL) {
-    mjson_printf(r->out, "%s", ",\"result\":");
     mjson_vprintf(r->out, result_fmt, ap);
+  } else {
+    mjson_printf(r->out, "%s", "null");
   }
   mjson_printf(r->out, "}\n");
   va_end(ap);
