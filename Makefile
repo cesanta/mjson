@@ -1,7 +1,7 @@
 all: test
 
 test: mjson.h mjson_test.c
-	$(CC) mjson_test.c -W -Wall -std=c99 $(CFLAGS) -o /tmp/x && /tmp/x
+	$(CC) mjson_test.c -W -Wall -std=c99 $(CFLAGS) -o /tmp/x && $(DEBUGGER) /tmp/x
 	g++ -x c++ mjson_test.c -W -Wall $(CFLAGS) -o /tmp/x && /tmp/x
 
 VC98 = docker run -v $(CURDIR):$(CURDIR) -w $(CURDIR) docker.io/mgos/vc98

@@ -14,11 +14,11 @@ void setup() {
   }, NULL, NULL, "1.0");
 
   // Export "Shadow.Delta". Pass a callback that updates ledOn
-  jsonrpc_export("Shadow.Delta", [](char *params, int params_len, struct mjson_out *out, void *ud) {
-    ledOn = mjson_get_bool(params, params_len, "$.on", 0);  // Fetch "on" shadow value
-    digitalWrite(LED_BUILTIN, ledOn);             // Set LED to the "on" value
-    reportState();  // Let shadow know our new state
-    return 0;       // Signal sucess to the RPC engine
+  jsonrpc_export("Shadow.Delta", [](struct jsonrpc_request *r) {
+    ledOn = mjson_get_bool(r->params, r->params_len, "$.on", 0);
+    digitalWrite(LED_BUILTIN, ledOn); // Set LED to the "on" value
+    reportState();                    // Let shadow know our new state
+    jsonrpc_return_success(r, NULL);  // Report success
   }, NULL);
 
   pinMode(LED_BUILTIN, OUTPUT);   // Configure LED pin

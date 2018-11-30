@@ -238,16 +238,50 @@ When a response frame gets received, a
 
 ```c
 #define jsonrpc_export(const char *name,
-                       int (*handler)(const char *params, int params_len, struct mjson_out *, void *),
+                       void (*handler)(struct jsonrpc_request *),
                        void *handler_data)
 ```
 
 Export JSON-RPC function. A function gets called by `jsonrpc_ctx_process()`,
 which parses an incoming frame and calls a registered handler.
-A `handler()` must return 0 for success, or non-0 for error. It could use
-the printing API for creating the result, or error message for error.
-A `handler()` receives `params`, the `struct mjson_out *` pointer to print
-a response to, and a `handler_data` pointer.
+A `handler()` receives `struct jsonrpc_request *`. It could use
+`jsonrpc_return_error()` or `jsonrpc_return_success()` for returning the result.
+
+## struct jsonrpc_request
+
+```c
+struct jsonrpc_request {
+  const char *params;     // Points to the "params" in the request frame
+  int params_len;         // Length of the "params"
+  const char *id;         // Points to the "id" in the request frame
+  int id_len;             // Length of the "id"
+  struct mjson_out *out;  // Output stream
+  void *userdata;         // Callback's user data as specified at export time
+};
+```
+
+This structure gets passed to the method callback.
+
+## jsonrpc_return_success
+
+```c
+void jsonrpc_return_success(struct jsonrpc_request *r, const char *result_fmt,
+                            ...);
+```
+
+Return result from the method handler. NOTE: if the request frame ID
+is not specified, this function does nothing.
+
+## jsonrpc_return_error
+
+```c
+void jsonrpc_return_error(struct jsonrpc_request *r, int code,
+                          const char *message_fmt, ...);
+```
+
+Return error from the method handler. NOTE: if the request frame ID
+is not specified, this function does nothing.
+
 
 ## JSON-RPC example
 

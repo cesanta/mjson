@@ -300,10 +300,9 @@ static void test_printf(void) {
   }
 }
 
-static int foo(char *buf, int len, struct mjson_out *out, void *userdata) {
-  double x = mjson_get_number(buf, len, "$[1]", 0);
-  mjson_printf(out, "{%Q:%g,%Q:%Q}", "x", x, "ud", (char *) userdata);
-  return 0;
+static void foo(struct jsonrpc_request *r) {
+  double x = mjson_get_number(r->params, r->params_len, "$[1]", 0);
+  jsonrpc_return_success(r, "{%Q:%g,%Q:%Q}", "x", x, "ud", r->userdata);
 }
 
 #define OUTLEN 200

@@ -542,7 +542,9 @@ int mjson_printf(struct mjson_out *out, const char *fmt, ...) {
 #endif
 
 #if MJSON_IMPLEMENT_STRTOD
-static int is_digit(int c) { return c >= '0' && c <= '9'; }
+static int is_digit(int c) {
+  return c >= '0' && c <= '9';
+}
 
 /* NOTE: strtod() implementation by Yasuhiro Matsumoto. */
 double strtod(const char *str, const char **end) {
@@ -645,10 +647,19 @@ done:
 #define JSONRPC_ERROR_BAD_PARAMS -32602 /* Invalid params passed */
 #define JSONRPC_ERROR_INTERNAL -32603   /* Internal JSON-RPC error */
 
+struct jsonrpc_request {
+  const char *params;     // Points to the "params" in the request frame
+  int params_len;         // Length of the "params"
+  const char *id;         // Points to the "id" in the request frame
+  int id_len;             // Length of the "id"
+  struct mjson_out *out;  // Output stream
+  void *userdata;         // Callback's user data as specified at export time
+};
+
 struct jsonrpc_method {
   const char *method;
   int method_sz;
-  int (*cb)(char *, int, struct mjson_out *, void *);
+  void (*cb)(struct jsonrpc_request *);
   void *cbdata;
   struct jsonrpc_method *next;
 };
@@ -659,16 +670,18 @@ struct jsonrpc_method {
  */
 struct jsonrpc_ctx {
   struct jsonrpc_method *methods;
-  void *privdata;
-  int (*sender)(const char *buf, int len, void *privdata);
-  void (*response_cb)(const char *buf, int len, void *privdata);
+  void *userdata;
+  int (*sender)(const char *buf, int len, void *userdata);
+  void (*response_cb)(const char *buf, int len, void *userdata);
   int in_len;
   char in[MJSON_RPC_IN_BUF_SIZE];
 };
 
-#define JSONRPC_CTX_INTIALIZER       \
-  {                                  \
-    NULL, NULL, NULL, NULL, 0, { 0 } \
+#define JSONRPC_CTX_INTIALIZER   \
+  {                              \
+    NULL, NULL, NULL, NULL, 0, { \
+      0                          \
+    }                            \
   }
 
 /* Registers function fn under the given name within the given RPC context */
@@ -706,29 +719,60 @@ int jsonrpc_ctx_call(struct jsonrpc_ctx *ctx, const char *fmt, ...) {
   va_start(ap, fmt);
   len = mjson_vprintf(&out, fmt, ap);
   va_end(ap);
-  len = ctx->sender(frame, len, ctx->privdata);
-  ctx->sender(&ch, 1, ctx->privdata);
+  len = ctx->sender(frame, len, ctx->userdata);
+  ctx->sender(&ch, 1, ctx->userdata);
   free(frame);
   return len;
 }
 
-int jsonrpc_ctx_process(struct jsonrpc_ctx *ctx, char *req, int req_sz) {
-  const char *id = NULL, *params = NULL, *result = NULL;
+void jsonrpc_return_error(struct jsonrpc_request *r, int code,
+                          const char *message_fmt, ...) {
+  va_list ap;
+  if (r->id_len == 0) return;
+  va_start(ap, message_fmt);
+  mjson_printf(r->out, "{\"id\":%.*s,\"error\":{\"code\":%d", r->id_len, r->id,
+               code);
+  if (message_fmt != NULL) {
+    mjson_printf(r->out, "%s", ",\"message\":");
+    mjson_vprintf(r->out, message_fmt, ap);
+  }
+  mjson_printf(r->out, "}}\n");
+  va_end(ap);
+}
+
+void jsonrpc_return_success(struct jsonrpc_request *r, const char *result_fmt,
+                            ...) {
+  va_list ap;
+  if (r->id_len == 0) return;
+  va_start(ap, result_fmt);
+  mjson_printf(r->out, "{\"id\":%.*s", r->id_len, r->id);
+  if (result_fmt != NULL) {
+    mjson_printf(r->out, "%s", ",\"result\":");
+    mjson_vprintf(r->out, result_fmt, ap);
+  }
+  mjson_printf(r->out, "}\n");
+  va_end(ap);
+}
+
+static int jsonrpc_printer(struct mjson_out *out, const char *buf, int len) {
+  struct jsonrpc_ctx *ctx = (struct jsonrpc_ctx *) out->u.fixed_buf.ptr;
+  return ctx->sender(buf, len, ctx->userdata);
+  // return fwrite(ptr, 1, len, out->u.fp);
+}
+
+void jsonrpc_ctx_process(struct jsonrpc_ctx *ctx, char *req, int req_sz) {
+  const char *result = NULL;
   char method[50];
-  int id_sz = 0, method_sz = 0, result_sz = 0, params_sz = 0;
-  int code = JSONRPC_ERROR_NOT_FOUND;
-  struct jsonrpc_method *m;
-  char *res = NULL, *frame = NULL;
-  struct mjson_out rout = MJSON_OUT_DYNAMIC_BUF(&res);
-  struct mjson_out fout = MJSON_OUT_DYNAMIC_BUF(&frame);
+  int method_sz = 0, result_sz = 0;
+  struct jsonrpc_method *m = NULL;
+  struct mjson_out out = {jsonrpc_printer, {{(char *) ctx, 0, 0, 0}}};
+  struct jsonrpc_request r = {NULL, 0, NULL, 0, &out, NULL};
 
   // Is is a response frame?
   mjson_find(req, req_sz, "$.result", &result, &result_sz);
   if (result != NULL && result_sz > 0) {
-    if (ctx->response_cb != NULL) {
-      ctx->response_cb(req, req_sz, ctx->privdata);
-    }
-    return 0;
+    if (ctx->response_cb != NULL) ctx->response_cb(req, req_sz, ctx->userdata);
+    return;
   }
 
   // Method must exist and must be a string
@@ -737,90 +781,60 @@ int jsonrpc_ctx_process(struct jsonrpc_ctx *ctx, char *req, int req_sz) {
     jsonrpc_ctx_call(ctx, "{\"error\":{\"code\":-32700,\"message\":%.*Q}}",
                      req_sz, req);
     ctx->in_len = 0;
-    return JSONRPC_ERROR_INVALID;
+    return;
   }
 
   // id and params are optional
-  mjson_find(req, req_sz, "$.id", &id, &id_sz);
-  mjson_find(req, req_sz, "$.params", &params, &params_sz);
+  mjson_find(req, req_sz, "$.id", &r.id, &r.id_len);
+  mjson_find(req, req_sz, "$.params", &r.params, &r.params_len);
 
   for (m = ctx->methods; m != NULL; m = m->next) {
     if (m->method_sz == method_sz && !memcmp(m->method, method, method_sz)) {
-      if (params == NULL) params = "";
-      code = m->cb((char *) params, params_sz, &rout, m->cbdata);
-      if (id == NULL) {
-        // No id, not sending any reply
-        free(res);
-        return code;
-      } else if (code == 0) {
-        mjson_printf(&fout, "{%Q:%.*s,%Q:%s}\n", "id", id_sz, id, "result",
-                     res == NULL ? "null" : res);
-      } else {
-        mjson_printf(&fout, "{%Q:%.*s,%Q:{%Q:%d,%Q:%s}}\n", "id", id_sz, id,
-                     "error", "code", code, "message",
-                     res == NULL ? "null" : res);
-      }
+      if (r.params == NULL) r.params = "";
+      r.userdata = m->cbdata;
+      m->cb(&r);
       break;
     }
   }
   if (m == NULL) {
-    mjson_printf(&fout, "{%Q:%.*s,%Q:{%Q:%d,%Q:%Q}}\n", "id", id_sz, id,
-                 "error", "code", code, "message", "method not found");
+    jsonrpc_return_error(&r, JSONRPC_ERROR_NOT_FOUND, "%Q", "method not found");
   }
-  ctx->sender(frame, strlen(frame), ctx->privdata);
-  free(frame);
-  free(res);
-  return code;
 }
 
-static int info(char *args, int len, struct mjson_out *out, void *userdata) {
-#if defined(__APPLE__)
-  const char *arch = "darwin";
-#elif defined(__linux__)
-  const char *arch = "linux";
-#elif defined(ESP_PLATFORM)
-  const char *arch = "esp32";
-#elif defined(ESP8266) || defined(MG_ESP8266)
-  const char *arch = "esp8266";
-#elif defined(MBED_LIBRARY_VERSION)
-  const char *arch = "mbedOS";
-#else
-  const char *arch = "unknown";
+static void info(struct jsonrpc_request *r) {
+#if !defined(JSONRPC_ARCH)
+#define JSONRPC_ARCH "unknown_arch"
 #endif
-
 #if !defined(JSONRPC_APP)
-#define JSONRPC_APP "posix_device"
+#define JSONRPC_APP "unknown_app"
 #endif
-
-  (void) args;
-  (void) len;
-  mjson_printf(out, "{%Q:%Q, %Q:%Q, %Q:%Q, %Q:%Q}", "fw_version", userdata,
-               "arch", arch, "fw_id", __DATE__ " " __TIME__, "app",
-               JSONRPC_APP);
-  return 0;
+  jsonrpc_return_success(r, "{%Q:%Q, %Q:%Q, %Q:%Q, %Q:%Q}", "fw_version",
+                         r->userdata, "arch", JSONRPC_ARCH, "fw_id",
+                         __DATE__ " " __TIME__, "app", JSONRPC_APP);
 }
 
-static int rpclist(char *in, int in_len, struct mjson_out *out, void *ud) {
-  struct jsonrpc_ctx *ctx = (struct jsonrpc_ctx *) ud;
+static int jsonrpc_print_methods(struct mjson_out *out, va_list *ap) {
+  struct jsonrpc_ctx *ctx = va_arg(*ap, struct jsonrpc_ctx *);
   struct jsonrpc_method *m;
-  mjson_print_buf(out, "[", 1);
+  int len = 0;
   for (m = ctx->methods; m != NULL; m = m->next) {
-    if (m != ctx->methods) mjson_print_buf(out, ",", 1);
-    mjson_print_str(out, m->method, strlen(m->method));
+    if (m != ctx->methods) len += mjson_print_buf(out, ",", 1);
+    len += mjson_print_str(out, m->method, strlen(m->method));
   }
-  mjson_print_buf(out, "]", 1);
-  (void) in;
-  (void) in_len;
-  return 0;
+  return len;
+}
+
+static void rpclist(struct jsonrpc_request *r) {
+  jsonrpc_return_success(r, "[%M]", jsonrpc_print_methods, r->userdata);
 }
 
 void jsonrpc_ctx_init(struct jsonrpc_ctx *ctx,
                       int (*send_cb)(const char *, int, void *),
                       void (*response_cb)(const char *, int, void *),
-                      void *privdata, const char *version) {
+                      void *userdata, const char *version) {
   ctx->sender = send_cb;
   ctx->response_cb = response_cb;
-  ctx->privdata = privdata;
+  ctx->userdata = userdata;
 
   jsonrpc_ctx_export(ctx, "Sys.Info", info, (void *) version);
   jsonrpc_ctx_export(ctx, "RPC.List", rpclist, ctx);
@@ -839,8 +853,8 @@ void jsonrpc_ctx_process_byte(struct jsonrpc_ctx *ctx, unsigned char ch) {
 
 void jsonrpc_init(int (*sender)(const char *, int, void *),
                   void (*response_cb)(const char *, int, void *),
-                  void *privdata, const char *version) {
-  jsonrpc_ctx_init(&jsonrpc_default_context, sender, response_cb, privdata,
+                  void *userdata, const char *version) {
+  jsonrpc_ctx_init(&jsonrpc_default_context, sender, response_cb, userdata,
                    version);
 }
 #endif
