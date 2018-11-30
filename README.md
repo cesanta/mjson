@@ -265,8 +265,7 @@ This structure gets passed to the method callback.
 ## jsonrpc_return_success
 
 ```c
-void jsonrpc_return_success(struct jsonrpc_request *r, const char *result_fmt,
-                            ...);
+void jsonrpc_return_success(struct jsonrpc_request *r, const char *result_fmt, ...);
 ```
 
 Return result from the method handler. NOTE: if the request frame ID
@@ -275,8 +274,7 @@ is not specified, this function does nothing.
 ## jsonrpc_return_error
 
 ```c
-void jsonrpc_return_error(struct jsonrpc_request *r, int code,
-                          const char *message_fmt, ...);
+void jsonrpc_return_error(struct jsonrpc_request *r, int code, const char *message_fmt, ...);
 ```
 
 Return error from the method handler. NOTE: if the request frame ID
