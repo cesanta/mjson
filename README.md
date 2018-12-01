@@ -363,22 +363,9 @@ see an answer frame:
 
 # Example - expose ANY microcontroller to the Internet
 
-The main purpose of this library is to make it possible for ANY microcontroller
-expose its own set of functions as simple RPC endpoints available via
-UART/SPI/I2C. The bridge MCU can expose target MCU as a set of REST endpoints:
-```
-┌──────────────┐          ┌─────────────┐          ┌──────────────┐
-│ target MCU   │   UART   │ bridge MCU  │    WSS   │     dash.    │
-│ e.g. Arduino ├──────────┤ e.g. ESP32  ├──────────┤ mongoose-os. ├──█ REST
-│   mjson.h    │ json-rpc │ Mongoose OS │ json-rpc │      com     │
-╰──────────────┘          ╰─────────────┘          ╰──────────────┘
-```
+[![](http://i3.ytimg.com/vi/od1rsIrvwrM/hqdefault.jpg)](https://www.youtube.com/watch?v=od1rsIrvwrM)
 
-- Open `examples/shadow.ino` in Arduino IDE, build and flash on any Arduino
-- Connect Arduino with any board (e.g. ESP8266) running
-  [Mongoose OS](https://mongoose-os.com) over UART
-- Configure ESP8266 on mDash ([see docs](https://mongoose-os.com/docs/mdash/registration.md))
-- Call Arduino via RESTful
+See https://mongoose-os.com/ccm/ for more information.
 
 # Contact
 
