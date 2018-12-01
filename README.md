@@ -361,7 +361,7 @@ see an answer frame:
 
 ![](example/rpc1.png)
 
-# Example - expose ANY microcontroller to the Internet
+# Example - connect Arduino Uno to AWS IoT device shadow
 
 [![](http://i3.ytimg.com/vi/od1rsIrvwrM/hqdefault.jpg)](https://www.youtube.com/watch?v=od1rsIrvwrM)
 
