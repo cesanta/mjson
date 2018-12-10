@@ -6,7 +6,7 @@
 # Features
 
 - Tiny footprint, single-header ISO C / ISO C++ library
-- State machine parser, no allocations, no recursio
+- State machine parser, no allocations, no recursion
 - High level API - fetch from JSON directly into C/C++ by
     [jsonpath](https://github.com/json-path/JsonPath)
 - Low level SAX API
