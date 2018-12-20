@@ -710,18 +710,21 @@ static struct jsonrpc_ctx jsonrpc_default_context = JSONRPC_CTX_INTIALIZER;
 #define jsonrpc_process_byte(x) \
   jsonrpc_ctx_process_byte(&jsonrpc_default_context, (x))
 
+static int jsonrpc_printer(struct mjson_out *out, const char *buf, int len) {
+  struct jsonrpc_ctx *ctx = (struct jsonrpc_ctx *) out->u.fixed_buf.ptr;
+  return ctx->sender(buf, len, ctx->userdata);
+  // return fwrite(ptr, 1, len, out->u.fp);
+}
+
 int jsonrpc_ctx_call(struct jsonrpc_ctx *ctx, const char *fmt, ...) {
-  char *frame = NULL;
-  struct mjson_out out = MJSON_OUT_DYNAMIC_BUF(&frame);
   va_list ap;
   int len;
   char ch = '\n';
+  struct mjson_out out = {jsonrpc_printer, {{(char *) ctx, 0, 0, 0}}};
   va_start(ap, fmt);
   len = mjson_vprintf(&out, fmt, ap);
   va_end(ap);
-  len = ctx->sender(frame, len, ctx->userdata);
   ctx->sender(&ch, 1, ctx->userdata);
-  free(frame);
   return len;
 }
 
@@ -755,12 +758,6 @@ void jsonrpc_return_success(struct jsonrpc_request *r, const char *result_fmt,
   }
   mjson_printf(r->out, "}\n");
   va_end(ap);
-}
-
-static int jsonrpc_printer(struct mjson_out *out, const char *buf, int len) {
-  struct jsonrpc_ctx *ctx = (struct jsonrpc_ctx *) out->u.fixed_buf.ptr;
-  return ctx->sender(buf, len, ctx->userdata);
-  // return fwrite(ptr, 1, len, out->u.fp);
 }
 
 void jsonrpc_ctx_process(struct jsonrpc_ctx *ctx, char *req, int req_sz) {
