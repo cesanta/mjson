@@ -547,7 +547,7 @@ static int is_digit(int c) {
 }
 
 /* NOTE: strtod() implementation by Yasuhiro Matsumoto. */
-double strtod(const char *str, const char **end) {
+double strtod(const char *str, char **end) {
   double d = 0.0;
   int sign = 1, n = 0;
   const char *p = str, *a = str;
@@ -685,13 +685,12 @@ struct jsonrpc_ctx {
   }
 
 /* Registers function fn under the given name within the given RPC context */
-#define jsonrpc_ctx_export(ctx, name, fn, ud)                               \
-  do {                                                                      \
-    static struct jsonrpc_method m = {(name), sizeof(name) - 1, (fn), NULL, \
-                                      NULL};                                \
-    m.cbdata = (ud);                                                        \
-    m.next = (ctx)->methods;                                                \
-    (ctx)->methods = &m;                                                    \
+#define jsonrpc_ctx_export(ctx, name, fn, ud)                                \
+  do {                                                                       \
+    static struct jsonrpc_method m = {(name), sizeof(name) - 1, (fn), 0, 0}; \
+    m.cbdata = (ud);                                                         \
+    m.next = (ctx)->methods;                                                 \
+    (ctx)->methods = &m;                                                     \
   } while (0)
 
 static struct jsonrpc_ctx jsonrpc_default_context = JSONRPC_CTX_INTIALIZER;
@@ -713,7 +712,6 @@ static struct jsonrpc_ctx jsonrpc_default_context = JSONRPC_CTX_INTIALIZER;
 static int jsonrpc_printer(struct mjson_out *out, const char *buf, int len) {
   struct jsonrpc_ctx *ctx = (struct jsonrpc_ctx *) out->u.fixed_buf.ptr;
   return ctx->sender(buf, len, ctx->userdata);
-  // return fwrite(ptr, 1, len, out->u.fp);
 }
 
 int jsonrpc_ctx_call(struct jsonrpc_ctx *ctx, const char *fmt, ...) {
