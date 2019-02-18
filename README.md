@@ -166,7 +166,8 @@ Print using `printf()`-like format string. Supported specifiers are:
 - `%s` print string as is. Expect NUL-terminated `char *`
 - `%.*s` print string as is. Expect `int, char *`
 - `%g` print floating point number. Expect `double`
-- `%d` print integer number. Expect `int`
+- `%d`/`%u` print signed/unsigned integer. Expect `int`
+- `%ld`/`%lu` print signed/unsigned long integer. Expect `long`
 - `%B` print `true` or `false`. Expect `int`
 - `%V` print quoted base64-encoded string. Expect `int, char *`
 - `%M` print using custom print function. Expect `int (*)(struct mjson_out *, va_list *)`

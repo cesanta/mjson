@@ -436,9 +436,17 @@ int mjson_print_buf(struct mjson_out *out, const char *buf, int len) {
   return out->print(out, buf, len);
 }
 
-int mjson_print_int(struct mjson_out *out, int value) {
-  char buf[40];
-  int len = snprintf(buf, sizeof(buf), "%d", value);
+int mjson_print_int(struct mjson_out *out, int value, int is_signed) {
+  char buf[20];
+  const char *fmt = (is_signed ? "%d" : "%u");
+  int len = snprintf(buf, sizeof(buf), fmt, value);
+  return out->print(out, buf, len);
+}
+
+int mjson_print_long(struct mjson_out *out, long value, int is_signed) {
+  char buf[20];
+  const char *fmt = (is_signed ? "%ld" : "%lu");
+  int len = snprintf(buf, sizeof(buf), fmt, value);
   return out->print(out, buf, len);
 }
 
@@ -481,42 +489,55 @@ int mjson_print_b64(struct mjson_out *out, const unsigned char *s, int n) {
 typedef int (*mjson_printf_fn_t)(struct mjson_out *, va_list *);
 
 int mjson_vprintf(struct mjson_out *out, const char *fmt, va_list ap) {
-  int i, n = 0;
-  for (i = 0; fmt[i] != '\0'; i++) {
+  int i = 0, n = 0;
+  while (fmt[i] != '\0') {
     if (fmt[i] == '%') {
-      if (fmt[i + 1] == 'Q') {
+      char fc = fmt[++i];
+      int is_long = 0;
+      if (fc == 'l') {
+        is_long = 1;
+        fc = fmt[i + 1];
+      }
+      if (fc == 'Q') {
         char *buf = va_arg(ap, char *);
         n += mjson_print_str(out, buf, strlen(buf));
-      } else if (memcmp(&fmt[i + 1], ".*Q", 3) == 0) {
+      } else if (memcmp(&fmt[i], ".*Q", 3) == 0) {
         int len = va_arg(ap, int);
         char *buf = va_arg(ap, char *);
         n += mjson_print_str(out, buf, len);
         i += 2;
-      } else if (fmt[i + 1] == 'd') {
-        int val = va_arg(ap, int);
-        n += mjson_print_int(out, val);
-      } else if (fmt[i + 1] == 'B') {
+      } else if (fc == 'd' || fc == 'u') {
+        int is_signed = (fc == 'd');
+        if (is_long) {
+          long val = va_arg(ap, long);
+          n += mjson_print_long(out, val, is_signed);
+          i++;
+        } else {
+          int val = va_arg(ap, int);
+          n += mjson_print_int(out, val, is_signed);
+        }
+      } else if (fc == 'B') {
         const char *s = va_arg(ap, int) ? "true" : "false";
         n += mjson_print_buf(out, s, strlen(s));
-      } else if (fmt[i + 1] == 's') {
+      } else if (fc == 's') {
         char *buf = va_arg(ap, char *);
         n += mjson_print_buf(out, buf, strlen(buf));
-      } else if (memcmp(&fmt[i + 1], ".*s", 3) == 0) {
+      } else if (memcmp(&fmt[i], ".*s", 3) == 0) {
         int len = va_arg(ap, int);
         char *buf = va_arg(ap, char *);
         n += mjson_print_buf(out, buf, len);
         i += 2;
-      } else if (fmt[i + 1] == 'g') {
+      } else if (fc == 'g') {
         n += mjson_print_dbl(out, va_arg(ap, double), "%g");
-      } else if (fmt[i + 1] == 'f') {
+      } else if (fc == 'f') {
         n += mjson_print_dbl(out, va_arg(ap, double), "%f");
 #if MJSON_ENABLE_BASE64
-      } else if (fmt[i + 1] == 'V') {
+      } else if (fc == 'V') {
         int len = va_arg(ap, int);
         const char *buf = va_arg(ap, const char *);
         n += mjson_print_b64(out, (unsigned char *) buf, len);
 #endif
-      } else if (fmt[i + 1] == 'M') {
+      } else if (fc == 'M') {
         va_list tmp;
         mjson_printf_fn_t fn;
         va_copy(tmp, ap);
@@ -525,7 +546,7 @@ int mjson_vprintf(struct mjson_out *out, const char *fmt, va_list ap) {
       }
       i++;
     } else {
-      n += mjson_print_buf(out, &fmt[i], 1);
+      n += mjson_print_buf(out, &fmt[i++], 1);
     }
   }
   return n;
