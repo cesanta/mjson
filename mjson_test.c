@@ -1,7 +1,11 @@
 #include <assert.h>
 #include <stdio.h>
 
+#ifdef INCLUDE_MJSON_C
+#include "mjson.c"
+#else
 #include "mjson.h"
+#endif
 
 static void test_cb(void) {
   const char *str;
