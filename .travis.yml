@@ -30,5 +30,5 @@ matrix:
       script:
         - arduino-cli sketch new TestSketch
         - cp $PWD/example/shadow.ino $HOME/Arduino/TestSketch/TestSketch.ino
-        - cp mjson.h $HOME/Arduino/TestSketch
+        - cp mjson.c $HOME/Arduino/TestSketch
         - arduino-cli compile --verbose --warnings all --fqbn arduino:avr:nano $HOME/Arduino/TestSketch
