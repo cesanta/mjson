@@ -223,7 +223,7 @@ static void test_print(void) {
 
   {
     struct mjson_out out = MJSON_OUT_FIXED_BUF(tmp, sizeof(tmp));
-    assert(mjson_print_int(&out, 3456789012, 0) == 10);
+    assert(mjson_print_int(&out, (int) 3456789012, 0) == 10);
     assert(memcmp(tmp, "3456789012", 10) == 0);
     assert(out.u.fixed_buf.overflow == 0);
   }
@@ -283,11 +283,13 @@ static void test_printf(void) {
   {
     char *s = NULL;
     struct mjson_out out = MJSON_OUT_DYNAMIC_BUF(&s);
-    assert(mjson_printf(
-        &out, "{\"a\":%d, \"b\":%u, \"c\":%ld, \"d\":%lu, \"e\":%M}",
-        -1, 3456789012, (long) -1, (unsigned long) 3456789012, f1, 1234) == 60);
+    const char *fmt = "{\"a\":%d, \"b\":%u, \"c\":%ld, \"d\":%lu, \"e\":%M}";
+    assert(mjson_printf(&out, fmt, -1, 3456789012, (long) -1,
+                        (unsigned long) 3456789012, f1, 1234) == 60);
     assert(s != NULL);
-    str = "{\"a\":-1, \"b\":3456789012, \"c\":-1, \"d\":3456789012, \"e\":[1234]}";
+    str =
+        "{\"a\":-1, \"b\":3456789012, \"c\":-1, \"d\":3456789012, "
+        "\"e\":[1234]}";
     assert(memcmp(s, str, 60) == 0);
     free(s);
   }
