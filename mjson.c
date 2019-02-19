@@ -133,14 +133,13 @@ int mjson_print_fixed_buf(struct mjson_out *out, const char *ptr, int len);
 
 int mjson_print_dynamic_buf(struct mjson_out *out, const char *ptr, int len);
 
-#endif  /* MJSON_ENABLE_PRINT */
+#endif /* MJSON_ENABLE_PRINT */
 
 #if MJSON_ENABLE_RPC
 
 void jsonrpc_init(int (*sender)(const char *, int, void *),
                   void (*response_cb)(const char *, int, void *),
                   void *userdata, const char *version);
-
 
 struct jsonrpc_request {
   const char *params;     // Points to the "params" in the request frame
@@ -191,7 +190,8 @@ int jsonrpc_ctx_call(struct jsonrpc_ctx *ctx, const char *fmt, ...);
 void jsonrpc_return_error(struct jsonrpc_request *r, int code,
                           const char *message_fmt, ...);
 
-void jsonrpc_return_success(struct jsonrpc_request *r, const char *result_fmt, ...);
+void jsonrpc_return_success(struct jsonrpc_request *r, const char *result_fmt,
+                            ...);
 
 void jsonrpc_ctx_process(struct jsonrpc_ctx *ctx, char *req, int req_sz);
 
@@ -679,7 +679,7 @@ int mjson_printf(struct mjson_out *out, const char *fmt, ...) {
   va_end(ap);
   return len;
 }
-#endif  /* MJSON_ENABLE_PRINT */
+#endif /* MJSON_ENABLE_PRINT */
 
 #if MJSON_IMPLEMENT_STRTOD
 static int is_digit(int c) {
@@ -914,7 +914,7 @@ void jsonrpc_ctx_init(struct jsonrpc_ctx *ctx,
   ctx->response_cb = response_cb;
   ctx->userdata = userdata;
 
-  jsonrpc_ctx_export(ctx, "Sys.Info", info, (void *) version);
+  jsonrpc_ctx_export(ctx, "Sys.GetInfo", info, (void *) version);
   jsonrpc_ctx_export(ctx, "RPC.List", rpclist, ctx);
 }
 
