@@ -1,4 +1,4 @@
-#include "mjson.h"  // Sketch -> Add File -> Add mjson.h
+#include "mjson.c"  // Sketch -> Add File -> Add mjson.c
 
 static int ledOn = 0;  // Current LED status
 
