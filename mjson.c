@@ -139,7 +139,7 @@ int mjson_print_dynamic_buf(struct mjson_out *out, const char *ptr, int len);
 
 void jsonrpc_init(int (*sender)(const char *, int, void *),
                   void (*response_cb)(const char *, int, void *),
-                  void *userdata, const char *version);
+                  void *userdata);
 
 struct jsonrpc_request {
   const char *params;     // Points to the "params" in the request frame
@@ -183,7 +183,7 @@ struct jsonrpc_ctx {
 void jsonrpc_ctx_init(struct jsonrpc_ctx *ctx,
                       int (*send_cb)(const char *, int, void *),
                       void (*response_cb)(const char *, int, void *),
-                      void *userdata, const char *version);
+                      void *userdata);
 
 int jsonrpc_ctx_call(struct jsonrpc_ctx *ctx, const char *fmt, ...);
 
@@ -879,18 +879,6 @@ void jsonrpc_ctx_process(struct jsonrpc_ctx *ctx, char *req, int req_sz) {
   }
 }
 
-static void info(struct jsonrpc_request *r) {
-#if !defined(JSONRPC_ARCH)
-#define JSONRPC_ARCH "unknown_arch"
-#endif
-#if !defined(JSONRPC_APP)
-#define JSONRPC_APP "unknown_app"
-#endif
-  jsonrpc_return_success(r, "{%Q:%Q, %Q:%Q, %Q:%Q, %Q:%Q}", "fw_version",
-                         r->userdata, "arch", JSONRPC_ARCH, "fw_id",
-                         __DATE__ " " __TIME__, "app", JSONRPC_APP);
-}
-
 static int jsonrpc_print_methods(struct mjson_out *out, va_list *ap) {
   struct jsonrpc_ctx *ctx = va_arg(*ap, struct jsonrpc_ctx *);
   struct jsonrpc_method *m;
@@ -909,12 +897,11 @@ static void rpclist(struct jsonrpc_request *r) {
 void jsonrpc_ctx_init(struct jsonrpc_ctx *ctx,
                       int (*send_cb)(const char *, int, void *),
                       void (*response_cb)(const char *, int, void *),
-                      void *userdata, const char *version) {
+                      void *userdata) {
   ctx->sender = send_cb;
   ctx->response_cb = response_cb;
   ctx->userdata = userdata;
 
-  jsonrpc_ctx_export(ctx, "Sys.GetInfo", info, (void *) version);
   jsonrpc_ctx_export(ctx, "RPC.List", rpclist, ctx);
 }
 
@@ -931,8 +918,7 @@ void jsonrpc_ctx_process_byte(struct jsonrpc_ctx *ctx, unsigned char ch) {
 
 void jsonrpc_init(int (*sender)(const char *, int, void *),
                   void (*response_cb)(const char *, int, void *),
-                  void *userdata, const char *version) {
-  jsonrpc_ctx_init(&jsonrpc_default_context, sender, response_cb, userdata,
-                   version);
+                  void *userdata) {
+  jsonrpc_ctx_init(&jsonrpc_default_context, sender, response_cb, userdata);
 }
 #endif

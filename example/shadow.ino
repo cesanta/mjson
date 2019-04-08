@@ -11,7 +11,7 @@ void setup() {
   // Init RPC library. Pass a "sender" function that writes RPC reply frame.
   jsonrpc_init([](const char *frame, int frame_len, void *privdata) {
     return (int) Serial.write(frame, frame_len);
-  }, NULL, NULL, "1.0");
+  }, NULL, NULL);
 
   // Export "Shadow.Delta". Pass a callback that updates ledOn
   jsonrpc_export("Shadow.Delta", [](struct jsonrpc_request *r) {

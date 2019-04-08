@@ -345,7 +345,7 @@ static void test_rpc(void) {
   char out[OUTLEN + 1];
 
   // Init context
-  jsonrpc_ctx_init(ctx, sender, response_cb, out, "1.0");
+  jsonrpc_ctx_init(ctx, sender, response_cb, out);
 
   {
     // Call RPC.List

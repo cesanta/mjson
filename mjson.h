@@ -132,7 +132,7 @@ int mjson_print_dynamic_buf(struct mjson_out *out, const char *ptr, int len);
 
 void jsonrpc_init(int (*sender)(const char *, int, void *),
                   void (*response_cb)(const char *, int, void *),
-                  void *userdata, const char *version);
+                  void *userdata);
 
 struct jsonrpc_request {
   const char *params;     // Points to the "params" in the request frame
@@ -176,7 +176,7 @@ struct jsonrpc_ctx {
 void jsonrpc_ctx_init(struct jsonrpc_ctx *ctx,
                       int (*send_cb)(const char *, int, void *),
                       void (*response_cb)(const char *, int, void *),
-                      void *userdata, const char *version);
+                      void *userdata);
 int jsonrpc_ctx_call(struct jsonrpc_ctx *ctx, const char *fmt, ...);
 void jsonrpc_return_error(struct jsonrpc_request *r, int code,
                           const char *message_fmt, ...);
