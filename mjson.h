@@ -68,14 +68,10 @@ typedef void (*mjson_cb_t)(int ev, const char *s, int off, int len, void *ud);
 #endif
 
 int mjson(const char *s, int len, mjson_cb_t cb, void *ud);
-
 enum mjson_tok mjson_find(const char *s, int len, const char *jp,
                           const char **tokptr, int *toklen);
-
 double mjson_get_number(const char *s, int len, const char *path, double def);
-
 int mjson_get_bool(const char *s, int len, const char *path, int dflt);
-
 int mjson_get_string(const char *s, int len, const char *path, char *to, int n);
 
 #if MJSON_ENABLE_BASE64
@@ -93,6 +89,7 @@ struct mjson_out {
     } fixed_buf;
     char **dynamic_buf;
     FILE *fp;
+    void *ptrs[2];
   } u;
 };
 
@@ -130,8 +127,7 @@ int mjson_print_dynamic_buf(struct mjson_out *out, const char *ptr, int len);
 
 #if MJSON_ENABLE_RPC
 
-void jsonrpc_init(int (*sender)(const char *, int, void *),
-                  void (*response_cb)(const char *, int, void *),
+void jsonrpc_init(void (*response_cb)(const char *, int, void *),
                   void *userdata);
 
 struct jsonrpc_request {
@@ -151,6 +147,8 @@ struct jsonrpc_method {
   struct jsonrpc_method *next;
 };
 
+typedef int (*jsonrpc_sender_t)(const char *buf, int len, void *userdata);
+
 /*
  * Main RPC context, stores current request information and a list of
  * exported RPC methods.
@@ -158,7 +156,6 @@ struct jsonrpc_method {
 struct jsonrpc_ctx {
   struct jsonrpc_method *methods;
   void *userdata;
-  int (*sender)(const char *buf, int len, void *userdata);
   void (*response_cb)(const char *buf, int len, void *userdata);
   int in_len;
   char in[MJSON_RPC_IN_BUF_SIZE];
@@ -174,25 +171,22 @@ struct jsonrpc_ctx {
   } while (0)
 
 void jsonrpc_ctx_init(struct jsonrpc_ctx *ctx,
-                      int (*send_cb)(const char *, int, void *),
                       void (*response_cb)(const char *, int, void *),
                       void *userdata);
-int jsonrpc_ctx_call(struct jsonrpc_ctx *ctx, const char *fmt, ...);
+int jsonrpc_call(jsonrpc_sender_t fn, void *fndata, const char *fmt, ...);
 void jsonrpc_return_error(struct jsonrpc_request *r, int code,
                           const char *message_fmt, ...);
 void jsonrpc_return_success(struct jsonrpc_request *r, const char *result_fmt,
                             ...);
-void jsonrpc_ctx_process(struct jsonrpc_ctx *ctx, char *req, int req_sz);
-void jsonrpc_ctx_process_byte(struct jsonrpc_ctx *ctx, unsigned char ch);
+void jsonrpc_ctx_process(struct jsonrpc_ctx *ctx, char *req, int req_sz,
+                         jsonrpc_sender_t fn, void *fndata);
+void jsonrpc_ctx_process_byte(struct jsonrpc_ctx *ctx, unsigned char ch,
+                              jsonrpc_sender_t fn, void *fndata);
+
 extern struct jsonrpc_ctx jsonrpc_default_context;
 
 #define jsonrpc_export(name, fn, ud) \
   jsonrpc_ctx_export(&jsonrpc_default_context, (name), (fn), (ud))
-
-#if !defined(_MSC_VER) || _MSC_VER >= 1700
-#define jsonrpc_call(fmt, ...) \
-  jsonrpc_ctx_call(&jsonrpc_default_context, fmt, __VA_ARGS__)
-#endif
 
 #define jsonrpc_process(buf, len) \
   jsonrpc_ctx_process(&jsonrpc_default_context, (buf), (len))

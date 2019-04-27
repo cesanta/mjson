@@ -333,7 +333,9 @@ static int sender(const char *buf, int len, void *privdata) {
 }
 
 static void process_str(struct jsonrpc_ctx *ctx, const char *str) {
-  while (str && *str != '\0') jsonrpc_ctx_process_byte(ctx, *str++);
+  while (str && *str != '\0') {
+    jsonrpc_ctx_process_byte(ctx, *str++, sender, ctx->userdata);
+  }
 }
 
 static void response_cb(const char *buf, int len, void *privdata) {
@@ -345,7 +347,7 @@ static void test_rpc(void) {
   char out[OUTLEN + 1];
 
   // Init context
-  jsonrpc_ctx_init(ctx, sender, response_cb, out);
+  jsonrpc_ctx_init(ctx, response_cb, out);
 
   {
     // Call RPC.List
@@ -385,7 +387,7 @@ static void test_rpc(void) {
     // Test notify
     const char *reply = "{\"method\":\"ping\"}\n";
     out[0] = '\0';
-    jsonrpc_ctx_call(ctx, "{%Q:%Q}", "method", "ping");
+    jsonrpc_call(sender, out, "{%Q:%Q}", "method", "ping");
     // printf("--> [%s]\n", out);
     assert(strcmp(out, reply) == 0);
   }

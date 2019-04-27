@@ -197,8 +197,7 @@ For the example, see `unit_test.c :: test_rpc()` function.
 ## jsonrpc_init
 
 ```c
-void jsonrpc_init(int (*sender)(char *, int, void *),
-                  int (*response_cb)(char *, int, void *),
+void jsonrpc_init( int (*response_cb)(char *, int, void *),
                   void *privdata);
 ```
 
@@ -216,7 +215,7 @@ pointer.
 ## jsonrpc_process
 
 ```c
-jsonrpc_process(const char *frame, int frame_len);
+jsonrpc_process(const char *frame, int frame_len, jsonrpc_sender_t fn, void *fdata);
 ```
 
 Parse JSON-RPC frame contained in `frame`, and invoke a registered handler.
@@ -224,7 +223,7 @@ Parse JSON-RPC frame contained in `frame`, and invoke a registered handler.
 ## jsonrpc_call
 
 ```c
-jsonrpc_call(const char *fmt, ...)
+jsonrpc_call(jsonrpc_sender_t fn, void *fdata, const char *fmt, ...)
 ```
 
 Send JSON-RPC call frame. The format must create a valid frame.
@@ -305,20 +304,20 @@ static int sender(char *frame, int frame_len, void *privdata) {
 }
 
 int main(void) {
-  jsonrpc_init(sender, NULL, NULL);
+  jsonrpc_init(NULL, NULL);
 
   // Call rpc.list
   char request1[] = "{\"id\": 1, \"method\": \"rpc.list\"}";
-  jsonrpc_process(request1, strlen(request1));
+  jsonrpc_process(request1, strlen(request1), sender, NULL);
 
   // Call non-existent method
   char request2[] = "{\"id\": 1, \"method\": \"foo\"}";
-  jsonrpc_process(request2, strlen(request2));
+  jsonrpc_process(request2, strlen(request2), sender, NULL);
 
   // Register our own function
   char request3[] = "{\"id\": 2, \"method\": \"foo\",\"params\":[0,1.23]}";
   jsonrpc_export("foo", foo, (void *) "hi");
-  jsonrpc_process(request3, strlen(request3));
+  jsonrpc_process(request3, strlen(request3), sender, NULL);
 
   return 0;
 }
@@ -342,13 +341,13 @@ static void sum(struct jsonrpc_request *r) {
 }
 
 void setup() {
-  jsonrpc_init(sender, NULL, NULL);   // Initialise the library
+  jsonrpc_init(NULL, NULL);   // Initialise the library
   jsonrpc_export("Sum", sum, NULL);   // Export "Sum" function
   Serial.begin(115200);               // Setup serial port
 }
 
 void loop() {
-  if (Serial.available() > 0) jsonrpc_process_byte(Serial.read());
+  if (Serial.available() > 0) jsonrpc_process_byte(Serial.read(), sender, NULL);
 }
 ```
 
