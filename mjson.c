@@ -191,8 +191,8 @@ extern struct jsonrpc_ctx jsonrpc_default_context;
 #define jsonrpc_process(buf, len, fn, data) \
   jsonrpc_ctx_process(&jsonrpc_default_context, (buf), (len), (fn), (data))
 
-#define jsonrpc_process_byte(x) \
-  jsonrpc_ctx_process_byte(&jsonrpc_default_context, (x))
+#define jsonrpc_process_byte(x, fn, data) \
+  jsonrpc_ctx_process_byte(&jsonrpc_default_context, (x), (fn), (data))
 
 #endif /* MJSON_ENABLE_RPC */
 
