@@ -8,7 +8,7 @@ static int sender(const char *frame, int frame_len, void *privdata) {
 }
 
 static void reportState(void) {
-  jsonrpc_call("{\"method\":\"Shadow.Report\",\"params\":{\"on\":%s}}",
+  jsonrpc_call(sender, NULL, "{\"method\":\"Shadow.Report\",\"params\":{\"on\":%s}}",
                ledOn ? "true" : "false");
 }
 
