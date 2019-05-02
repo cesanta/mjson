@@ -789,11 +789,9 @@ int jsonrpc_call(jsonrpc_sender_t fn, void *fndata, const char *fmt, ...) {
   return len;
 }
 
-void jsonrpc_return_error(struct jsonrpc_request *r, int code,
-                          const char *message_fmt, ...) {
-  va_list ap;
+void jsonrpc_return_errorv(struct jsonrpc_request *r, int code,
+                           const char *message_fmt, va_list ap) {
   if (r->id_len == 0) return;
-  va_start(ap, message_fmt);
   mjson_printf(r->out,
                "{\"id\":%.*s,\"error\":{\"code\":%d,\"message\":", r->id_len,
                r->id, code);
@@ -803,14 +801,19 @@ void jsonrpc_return_error(struct jsonrpc_request *r, int code,
     mjson_printf(r->out, "%s", "\"\"");
   }
   mjson_printf(r->out, "}}\n");
+}
+
+void jsonrpc_return_error(struct jsonrpc_request *r, int code,
+                          const char *message_fmt, ...) {
+  va_list ap;
+  va_start(ap, message_fmt);
+  jsonrpc_return_errorv(r, code, message_fmt, ap);
   va_end(ap);
 }
 
-void jsonrpc_return_success(struct jsonrpc_request *r, const char *result_fmt,
-                            ...) {
-  va_list ap;
+void jsonrpc_return_successv(struct jsonrpc_request *r, const char *result_fmt,
+                             va_list ap) {
   if (r->id_len == 0) return;
-  va_start(ap, result_fmt);
   mjson_printf(r->out, "{\"id\":%.*s,\"result\":", r->id_len, r->id);
   if (result_fmt != NULL) {
     mjson_vprintf(r->out, result_fmt, ap);
@@ -818,6 +821,13 @@ void jsonrpc_return_success(struct jsonrpc_request *r, const char *result_fmt,
     mjson_printf(r->out, "%s", "null");
   }
   mjson_printf(r->out, "}\n");
+}
+
+void jsonrpc_return_success(struct jsonrpc_request *r, const char *result_fmt,
+                            ...) {
+  va_list ap;
+  va_start(ap, result_fmt);
+  jsonrpc_return_successv(r, result_fmt, ap);
   va_end(ap);
 }
 
