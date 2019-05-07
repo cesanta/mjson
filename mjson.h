@@ -70,8 +70,8 @@ typedef void (*mjson_cb_t)(int ev, const char *s, int off, int len, void *ud);
 int mjson(const char *s, int len, mjson_cb_t cb, void *ud);
 enum mjson_tok mjson_find(const char *s, int len, const char *jp,
                           const char **tokptr, int *toklen);
-double mjson_get_number(const char *s, int len, const char *path, double def);
-int mjson_get_bool(const char *s, int len, const char *path, int dflt);
+int mjson_get_number(const char *s, int len, const char *path, double *v);
+int mjson_get_bool(const char *s, int len, const char *path, int *v);
 int mjson_get_string(const char *s, int len, const char *path, char *to, int n);
 
 #if MJSON_ENABLE_BASE64
@@ -188,8 +188,8 @@ extern struct jsonrpc_ctx jsonrpc_default_context;
 #define jsonrpc_export(name, fn, ud) \
   jsonrpc_ctx_export(&jsonrpc_default_context, (name), (fn), (ud))
 
-#define jsonrpc_process(buf, len) \
-  jsonrpc_ctx_process(&jsonrpc_default_context, (buf), (len))
+#define jsonrpc_process(buf, len, fn, data) \
+  jsonrpc_ctx_process(&jsonrpc_default_context, (buf), (len), (fn), (data))
 
 #define jsonrpc_process_byte(x, fn, data) \
   jsonrpc_ctx_process_byte(&jsonrpc_default_context, (x), (fn), (data))

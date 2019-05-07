@@ -70,8 +70,8 @@ typedef void (*mjson_cb_t)(int ev, const char *s, int off, int len, void *ud);
 int mjson(const char *s, int len, mjson_cb_t cb, void *ud);
 enum mjson_tok mjson_find(const char *s, int len, const char *jp,
                           const char **tokptr, int *toklen);
-double mjson_get_number(const char *s, int len, const char *path, double def);
-int mjson_get_bool(const char *s, int len, const char *path, int dflt);
+int mjson_get_number(const char *s, int len, const char *path, double *v);
+int mjson_get_bool(const char *s, int len, const char *path, int *v);
 int mjson_get_string(const char *s, int len, const char *path, char *to, int n);
 
 #if MJSON_ENABLE_BASE64
@@ -414,21 +414,20 @@ enum mjson_tok mjson_find(const char *s, int len, const char *jp,
   return (enum mjson_tok) data.tok;
 }
 
-double mjson_get_number(const char *s, int len, const char *path, double def) {
+int mjson_get_number(const char *s, int len, const char *path, double *v) {
   const char *p;
-  int n;
-  double value = def;
-  if (mjson_find(s, len, path, &p, &n) == MJSON_TOK_NUMBER) {
-    value = strtod(p, NULL);
+  int tok, n;
+  if ((tok = mjson_find(s, len, path, &p, &n)) == MJSON_TOK_NUMBER) {
+    if (v != NULL) *v = strtod(p, NULL);
   }
-  return value;
+  return tok == MJSON_TOK_NUMBER ? 1 : 0;
 }
 
-int mjson_get_bool(const char *s, int len, const char *path, int dflt) {
-  int value = dflt, tok = mjson_find(s, len, path, NULL, NULL);
-  if (tok == MJSON_TOK_TRUE) value = 1;
-  if (tok == MJSON_TOK_FALSE) value = 0;
-  return value;
+int mjson_get_bool(const char *s, int len, const char *path, int *v) {
+  int tok = mjson_find(s, len, path, NULL, NULL);
+  if (tok == MJSON_TOK_TRUE) *v = 1;
+  if (tok == MJSON_TOK_FALSE) *v = 0;
+  return tok == MJSON_TOK_TRUE || tok == MJSON_TOK_FALSE ? 1 : 0;
 }
 
 static int mjson_unescape(const char *s, int len, char *to, int n) {

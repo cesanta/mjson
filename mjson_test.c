@@ -95,58 +95,65 @@ static void test_find(void) {
 
 static void test_get_number(void) {
   const char *str;
-  assert(mjson_get_number("", 0, "$", 123) == 123);
-  assert(mjson_get_number("234", 3, "$", 123) == 234);
+  double v;
+  assert(mjson_get_number("", 0, "$", &v) == 0);
+  assert(mjson_get_number("234", 3, "$", &v) == 1 && v == 234);
   str = "{\"a\":-7}";
-  assert(mjson_get_number(str, 8, "$.a", 123) == -7);
+  assert(mjson_get_number(str, 8, "$.a", &v) == 1 && v == -7);
   str = "{\"a\":1.2e3}";
-  assert(mjson_get_number(str, 11, "$.a", 123) == 1.2e3);
-  assert(mjson_get_number("[1.23,-43.47,17]", 16, "$", 42) == 42);
-  assert(mjson_get_number("[1.23,-43.47,17]", 16, "$[0]", 42) == 1.23);
-  assert(mjson_get_number("[1.23,-43.47,17]", 16, "$[1]", 42) == -43.47);
-  assert(mjson_get_number("[1.23,-43.47,17]", 16, "$[2]", 42) == 17);
-  assert(mjson_get_number("[1.23,-43.47,17]", 16, "$[3]", 42) == 42);
+  assert(mjson_get_number(str, 11, "$.a", &v) == 1 && v == 1.2e3);
+  assert(mjson_get_number("[1.23,-43.47,17]", 16, "$", &v) == 0);
+  assert(mjson_get_number("[1.23,-43.47,17]", 16, "$[0]", &v) == 1 &&
+         v == 1.23);
+  assert(mjson_get_number("[1.23,-43.47,17]", 16, "$[1]", &v) == 1 &&
+         v == -43.47);
+  assert(mjson_get_number("[1.23,-43.47,17]", 16, "$[2]", &v) == 1 && v == 17);
+  assert(mjson_get_number("[1.23,-43.47,17]", 16, "$[3]", &v) == 0);
   {
     const char *s = "{\"a1\":[1,2,{\"a2\":4},[],{}],\"a\":3}";
-    assert(mjson_get_number(s, strlen(s), "$.a", 0) == 3);
+    assert(mjson_get_number(s, strlen(s), "$.a", &v) == 1 && v == 3);
   }
   {
     const char *s = "[1,{\"a\":2}]";
-    assert(mjson_get_number(s, strlen(s), "$[0]", 0) == 1);
-    assert(mjson_get_number(s, strlen(s), "$[1].a", 0) == 2);
+    assert(mjson_get_number(s, strlen(s), "$[0]", &v) == v && v == 1);
+    assert(mjson_get_number(s, strlen(s), "$[1].a", &v) == 1 && v == 2);
   }
-  assert(mjson_get_number("[[2,1]]", 7, "$[0][1]", 42) == 1);
-  assert(mjson_get_number("[[2,1]]", 7, "$[0][0]", 42) == 2);
-  assert(mjson_get_number("[[2,[]]]", 8, "$[0][0]", 42) == 2);
-  assert(mjson_get_number("[1,[2,[]]]", 10, "$[1][0]", 42) == 2);
-  assert(mjson_get_number("[{},1]", 6, "$[1]", 42) == 1);
-  assert(mjson_get_number("[[],1]", 6, "$[1]", 42) == 1);
-  assert(mjson_get_number("[1,[2,[],3,[4,5]]]", 18, "$[0]", 42) == 1);
-  assert(mjson_get_number("[1,[2,[],3,[4,5]]]", 18, "$[1]", 42) == 42);
-  assert(mjson_get_number("[1,[2,[],3,[4,5]]]", 18, "$[1][0]", 42) == 2);
-  assert(mjson_get_number("[1,[2,[],3,[4,5]]]", 18, "$[1][2]", 42) == 3);
-  assert(mjson_get_number("[1,[2,[],3,[4,5]]]", 18, "$[1][3][0]", 42) == 4);
-  assert(mjson_get_number("[1,[2,[],3,[4,5]]]", 18, "$[1][3][1]", 42) == 5);
-  assert(mjson_get_number("[1,[2,[],3,[4,5]]]", 18, "$[1][3][2]", 42) == 42);
-  assert(mjson_get_number("[1,[2,[],3,[4,5]]]", 18, "$[1][3][2][0]", 3) == 3);
+  assert(mjson_get_number("[[2,1]]", 7, "$[0][1]", &v) == 1 && v == 1);
+  assert(mjson_get_number("[[2,1]]", 7, "$[0][0]", &v) == 1 && v == 2);
+  assert(mjson_get_number("[[2,[]]]", 8, "$[0][0]", &v) == 1 && v == 2);
+  assert(mjson_get_number("[1,[2,[]]]", 10, "$[1][0]", &v) == 1 && v == 2);
+  assert(mjson_get_number("[{},1]", 6, "$[1]", &v) == 1 && v == 1);
+  assert(mjson_get_number("[[],1]", 6, "$[1]", &v) == 1 && v == 1);
+  assert(mjson_get_number("[1,[2,[],3,[4,5]]]", 18, "$[0]", &v) == 1 && v == 1);
+  assert(mjson_get_number("[1,[2,[],3,[4,5]]]", 18, "$[1]", &v) == 0);
+  assert(mjson_get_number("[1,[2,[],3,[4,5]]]", 18, "$[1][0]", &v) == 1 &&
+         v == 2);
+  assert(mjson_get_number("[1,[2,[],3,[4,5]]]", 18, "$[1][2]", &v) == 1 &&
+         v == 3);
+  assert(mjson_get_number("[1,[2,[],3,[4,5]]]", 18, "$[1][3][0]", &v) == 1 &&
+         v == 4);
+  assert(mjson_get_number("[1,[2,[],3,[4,5]]]", 18, "$[1][3][1]", &v) == 1 &&
+         v == 5);
+  assert(mjson_get_number("[1,[2,[],3,[4,5]]]", 18, "$[1][3][2]", &v) == 0);
+  assert(mjson_get_number("[1,[2,[],3,[4,5]]]", 18, "$[1][3][2][0]", &v) == 0);
 
   str = "[1,2,{\"a\":[3,4]}]";
-  assert(mjson_get_number(str, 17, "$[1]", 3) == 2);
+  assert(mjson_get_number(str, 17, "$[1]", &v) == 1 && v == 2);
   str = "[1,2,{\"a\":[3,4]}]";
-  assert(mjson_get_number(str, 17, "$[2].a[0]", 11) == 3);
+  assert(mjson_get_number(str, 17, "$[2].a[0]", &v) == 1 && v == 3);
   str = "[1,2,{\"a\":[3,4]}]";
-  assert(mjson_get_number(str, 17, "$[2].a[1]", 11) == 4);
+  assert(mjson_get_number(str, 17, "$[2].a[1]", &v) == 1 && v == 4);
   str = "[1,2,{\"a\":[3,4]}]";
-  assert(mjson_get_number(str, 17, "$[2].a[2]", 11) == 11);
+  assert(mjson_get_number(str, 17, "$[2].a[2]", &v) == 0);
   str = "{\"a\":3,\"ab\":2}";
-  assert(mjson_get_number(str, 14, "$.ab", 0) == 2);
+  assert(mjson_get_number(str, 14, "$.ab", &v) == 1 && v == 2);
 }
 
 static void test_get_bool(void) {
-  assert(mjson_get_bool("", 0, "$", 1) == 1);
-  assert(mjson_get_bool("", 0, "$", 0) == 0);
-  assert(mjson_get_bool("true", 4, "$", 0) == 1);
-  assert(mjson_get_bool("false", 5, "$", 1) == 0);
+  int v;
+  assert(mjson_get_bool("", 0, "$", &v) == 0);
+  assert(mjson_get_bool("true", 4, "$", &v) == 1 && v == 1);
+  assert(mjson_get_bool("false", 5, "$", &v) == 1 && v == 0);
 }
 
 static void test_get_string(void) {
@@ -321,8 +328,9 @@ static void test_printf(void) {
 }
 
 static void foo(struct jsonrpc_request *r) {
-  double x = mjson_get_number(r->params, r->params_len, "$[1]", 0);
-  jsonrpc_return_success(r, "{%Q:%g,%Q:%Q}", "x", x, "ud", r->userdata);
+  double v = 0;
+  mjson_get_number(r->params, r->params_len, "$[1]", &v);
+  jsonrpc_return_success(r, "{%Q:%g,%Q:%Q}", "x", v, "ud", r->userdata);
 }
 
 #define OUTLEN 200
