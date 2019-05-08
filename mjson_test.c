@@ -150,10 +150,15 @@ static void test_get_number(void) {
 }
 
 static void test_get_bool(void) {
+  const char *s = "{\"state\":{\"lights\":true,\"version\":36,\"a\":false}}";
+  double x;
   int v;
   assert(mjson_get_bool("", 0, "$", &v) == 0);
   assert(mjson_get_bool("true", 4, "$", &v) == 1 && v == 1);
   assert(mjson_get_bool("false", 5, "$", &v) == 1 && v == 0);
+  assert(mjson_get_number(s, strlen(s), "$.state.version", &x) == 1 && x == 36);
+  assert(mjson_get_bool(s, strlen(s), "$.state.a", &v) == 1 && v == 0);
+  assert(mjson_get_bool(s, strlen(s), "$.state.lights", &v) == 1 && v == 1);
 }
 
 static void test_get_string(void) {
