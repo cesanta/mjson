@@ -425,8 +425,8 @@ int mjson_get_number(const char *s, int len, const char *path, double *v) {
 
 int mjson_get_bool(const char *s, int len, const char *path, int *v) {
   int tok = mjson_find(s, len, path, NULL, NULL);
-  if (tok == MJSON_TOK_TRUE) *v = 1;
-  if (tok == MJSON_TOK_FALSE) *v = 0;
+  if (tok == MJSON_TOK_TRUE && v != NULL) *v = 1;
+  if (tok == MJSON_TOK_FALSE && v != NULL) *v = 0;
   return tok == MJSON_TOK_TRUE || tok == MJSON_TOK_FALSE ? 1 : 0;
 }
 
