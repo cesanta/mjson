@@ -607,7 +607,7 @@ int ATTR mjson_vprintf(struct mjson_out *out, const char *fmt, va_list ap) {
       if (fc == 'Q') {
         char *buf = va_arg(ap, char *);
         n += mjson_print_str(out, buf, strlen(buf));
-      } else if (memcmp(&fmt[i], ".*Q", 3) == 0) {
+      } else if (strncmp(&fmt[i], ".*Q", 3) == 0) {
         int len = va_arg(ap, int);
         char *buf = va_arg(ap, char *);
         n += mjson_print_str(out, buf, len);
@@ -628,7 +628,7 @@ int ATTR mjson_vprintf(struct mjson_out *out, const char *fmt, va_list ap) {
       } else if (fc == 's') {
         char *buf = va_arg(ap, char *);
         n += mjson_print_buf(out, buf, strlen(buf));
-      } else if (memcmp(&fmt[i], ".*s", 3) == 0) {
+      } else if (strncmp(&fmt[i], ".*s", 3) == 0) {
         int len = va_arg(ap, int);
         char *buf = va_arg(ap, char *);
         n += mjson_print_buf(out, buf, len);
