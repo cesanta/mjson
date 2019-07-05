@@ -643,6 +643,16 @@ int ATTR mjson_vprintf(struct mjson_out *out, const char *fmt, va_list ap) {
         const char *buf = va_arg(ap, const char *);
         n += mjson_print_b64(out, (unsigned char *) buf, len);
 #endif
+      } else if (fc == 'H') {
+        const char *hex = "0123456789abcdef";
+        int i, len = va_arg(ap, int);
+        const unsigned char *p = va_arg(ap, const unsigned char *);
+        n += out->print(out, "\"", 1);
+        for (i = 0; i < len; i++) {
+          n += out->print(out, &hex[(p[i] >> 4) & 15], 1);
+          n += out->print(out, &hex[p[i] & 15], 1);
+        }
+        n += out->print(out, "\"", 1);
       } else if (fc == 'M') {
         va_list tmp;
         mjson_printf_fn_t fn;

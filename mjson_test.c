@@ -330,6 +330,14 @@ static void test_printf(void) {
     struct mjson_out out = MJSON_OUT_FILE(stdout);
     mjson_printf(&out, "{%Q:%Q}\n", "message", "well done, test passed");
   }
+
+  {
+    char tmp[100], s[] = "\"002001200220616263\"";
+    struct mjson_out out = MJSON_OUT_FIXED_BUF(tmp, sizeof(tmp));
+    memset(tmp, 0, sizeof(tmp));
+    assert(mjson_printf(&out, "%H", 9, "\x00 \x01 \x02 abc") == 20);
+    assert(strcmp(tmp, s) == 0);
+  }
 }
 
 static void foo(struct jsonrpc_request *r) {
