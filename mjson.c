@@ -456,7 +456,7 @@ int ATTR mjson_get_string(const char *s, int len, const char *path, char *to,
                           int n) {
   const char *p;
   int sz;
-  if (mjson_find(s, len, path, &p, &sz) != MJSON_TOK_STRING) return 0;
+  if (mjson_find(s, len, path, &p, &sz) != MJSON_TOK_STRING) return -1;
   return mjson_unescape(p + 1, sz - 2, to, n);
 }
 
