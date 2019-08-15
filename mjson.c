@@ -594,8 +594,10 @@ int ATTR mjson_print_b64(struct mjson_out *out, const unsigned char *s, int n) {
 
 typedef int (*mjson_printf_fn_t)(struct mjson_out *, va_list *);
 
-int ATTR mjson_vprintf(struct mjson_out *out, const char *fmt, va_list ap) {
+int ATTR mjson_vprintf(struct mjson_out *out, const char *fmt, va_list xap) {
   int i = 0, n = 0;
+  va_list ap;
+  va_copy(ap, xap);
   while (fmt[i] != '\0') {
     if (fmt[i] == '%') {
       char fc = fmt[++i];
@@ -654,11 +656,8 @@ int ATTR mjson_vprintf(struct mjson_out *out, const char *fmt, va_list ap) {
         }
         n += out->print(out, "\"", 1);
       } else if (fc == 'M') {
-        va_list tmp;
-        mjson_printf_fn_t fn;
-        va_copy(tmp, ap);
-        fn = va_arg(tmp, mjson_printf_fn_t);
-        n += fn(out, &tmp);
+        mjson_printf_fn_t fn = va_arg(ap, mjson_printf_fn_t);
+        n += fn(out, &ap);
       }
       i++;
     } else {
