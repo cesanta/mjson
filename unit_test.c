@@ -1,11 +1,7 @@
 #include <assert.h>
 #include <stdio.h>
 
-#ifdef INCLUDE_MJSON_C
-#include "mjson.c"
-#else
 #include "mjson.h"
-#endif
 
 static void test_cb(void) {
   const char *str;
@@ -193,99 +189,100 @@ static void test_print(void) {
   const char *str;
 
   {
-    struct mjson_out out = MJSON_OUT_FIXED_BUF(tmp, sizeof(tmp));
-    assert(mjson_print_int(&out, -97, 1) == 3);
+    struct mjson_fixedbuf fb = {tmp, sizeof(tmp), 0};
+    assert(mjson_print_int(&mjson_print_fixed_buf, &fb, -97, 1) == 3);
     assert(memcmp(tmp, "-97", 3) == 0);
-    assert(out.u.fixed_buf.overflow == 0);
+    assert(fb.len < fb.size);
   }
 
   {
-    struct mjson_out out = MJSON_OUT_FIXED_BUF(tmp, sizeof(tmp));
-    assert(mjson_print_int(&out, -97, 0) == 10);
+    struct mjson_fixedbuf fb = {tmp, sizeof(tmp), 0};
+    assert(mjson_print_int(&mjson_print_fixed_buf, &fb, -97, 0) == 10);
     assert(memcmp(tmp, "4294967199", 10) == 0);
-    assert(out.u.fixed_buf.overflow == 0);
+    assert(fb.len < fb.size);
   }
 
   {
-    struct mjson_out out = MJSON_OUT_FIXED_BUF(tmp, 3);
-    assert(mjson_print_int(&out, -97, 1) == 3);
+    struct mjson_fixedbuf fb = {tmp, sizeof(tmp), 0};
+    assert(mjson_print_int(&mjson_print_fixed_buf, &fb, -97, 1) == 3);
     assert(memcmp(tmp, "-97", 3) == 0);
-    assert(out.u.fixed_buf.overflow == 0);
+    assert(fb.len < fb.size);
   }
 
   {
-    struct mjson_out out = MJSON_OUT_FIXED_BUF(tmp, 2);
-    assert(mjson_print_int(&out, -97, 1) == 2);
-    assert(out.u.fixed_buf.overflow == 1);
+    struct mjson_fixedbuf fb = {tmp, 2, 0};
+    assert(mjson_print_int(&mjson_print_fixed_buf, &fb, -97, 1) == 2);
+    assert(fb.len == fb.size);
   }
 
   {
-    struct mjson_out out = MJSON_OUT_FIXED_BUF(tmp, sizeof(tmp));
-    assert(mjson_print_int(&out, 0, 1) == 1);
+    struct mjson_fixedbuf fb = {tmp, sizeof(tmp), 0};
+    assert(mjson_print_int(&mjson_print_fixed_buf, &fb, 0, 1) == 1);
     assert(memcmp(tmp, "0", 1) == 0);
-    assert(out.u.fixed_buf.overflow == 0);
+    assert(fb.len < fb.size);
   }
 
   {
-    struct mjson_out out = MJSON_OUT_FIXED_BUF(tmp, sizeof(tmp));
-    assert(mjson_print_int(&out, 12345678, 1) == 8);
+    struct mjson_fixedbuf fb = {tmp, sizeof(tmp), 0};
+    assert(mjson_print_int(&mjson_print_fixed_buf, &fb, 12345678, 1) == 8);
     assert(memcmp(tmp, "12345678", 8) == 0);
-    assert(out.u.fixed_buf.overflow == 0);
+    assert(fb.len < fb.size);
   }
 
   {
-    struct mjson_out out = MJSON_OUT_FIXED_BUF(tmp, sizeof(tmp));
-    assert(mjson_print_int(&out, (int) 3456789012, 0) == 10);
+    struct mjson_fixedbuf fb = {tmp, sizeof(tmp), 0};
+    assert(mjson_print_int(&mjson_print_fixed_buf, &fb, (int)3456789012, 0) ==
+           10);
     assert(memcmp(tmp, "3456789012", 10) == 0);
-    assert(out.u.fixed_buf.overflow == 0);
+    assert(fb.len < fb.size);
   }
 
   {
-    struct mjson_out out = MJSON_OUT_FIXED_BUF(tmp, sizeof(tmp));
-    assert(mjson_print_str(&out, "a", 1) == 3);
+    struct mjson_fixedbuf fb = {tmp, sizeof(tmp), 0};
+    assert(mjson_print_str(&mjson_print_fixed_buf, &fb, "a", 1) == 3);
     str = "\"a\"";
     assert(memcmp(tmp, str, 3) == 0);
-    assert(out.u.fixed_buf.overflow == 0);
+    assert(fb.len < fb.size);
   }
 
   {
-    struct mjson_out out = MJSON_OUT_FIXED_BUF(tmp, sizeof(tmp));
+    struct mjson_fixedbuf fb = {tmp, sizeof(tmp), 0};
     const char *s = "a\b\n\f\r\t\"";
-    assert(mjson_print_str(&out, s, 7) == 15);
+    assert(mjson_print_str(&mjson_print_fixed_buf, &fb, s, 7) == 15);
     str = "\"a\\b\\n\\f\\r\\t\\\"\"";
     assert(memcmp(tmp, str, 15) == 0);
-    assert(out.u.fixed_buf.overflow == 0);
+    assert(fb.len < fb.size);
   }
 }
 
-static int f1(struct mjson_out *out, va_list *ap) {
+static int f1(mjson_print_fn_t fn, void *fndata, va_list *ap) {
   int value = va_arg(*ap, int);
-  return mjson_printf(out, "[%d]", value);
+  return mjson_printf(fn, fndata, "[%d]", value);
 }
 
 static void test_printf(void) {
   const char *str;
   {
     char tmp[20];
-    struct mjson_out out = MJSON_OUT_FIXED_BUF(tmp, sizeof(tmp));
-    assert(mjson_printf(&out, "%g", 0.123) == 5);
+    struct mjson_fixedbuf fb = {tmp, sizeof(tmp), 0};
+    assert(mjson_printf(&mjson_print_fixed_buf, &fb, "%g", 0.123) == 5);
     assert(memcmp(tmp, "0.123", 5) == 0);
-    assert(out.u.fixed_buf.overflow == 0);
+    assert(fb.len < fb.size);
   }
 
   {
     char tmp[20];
-    struct mjson_out out = MJSON_OUT_FIXED_BUF(tmp, sizeof(tmp));
-    assert(mjson_printf(&out, "{%Q:%B}", "a", 1) == 10);
+    struct mjson_fixedbuf fb = {tmp, sizeof(tmp), 0};
+    assert(mjson_printf(&mjson_print_fixed_buf, &fb, "{%Q:%B}", "a", 1) == 10);
     str = "{\"a\":true}";
     assert(memcmp(tmp, str, 10) == 0);
-    assert(out.u.fixed_buf.overflow == 0);
+    assert(fb.len < fb.size);
   }
 
   {
     char *s = NULL;
-    struct mjson_out out = MJSON_OUT_DYNAMIC_BUF(&s);
-    assert(mjson_printf(&out, "{%Q:%d, %Q:[%s]}", "a", 1, "b", "null") == 19);
+    assert(mjson_printf(&mjson_print_dynamic_buf, &s, "{%Q:%d, %Q:[%s]}", "a",
+                        1, "b", "null") == 19);
     assert(s != NULL);
     str = "{\"a\":1, \"b\":[null]}";
     assert(memcmp(s, str, 19) == 0);
@@ -294,10 +291,9 @@ static void test_printf(void) {
 
   {
     char *s = NULL;
-    struct mjson_out out = MJSON_OUT_DYNAMIC_BUF(&s);
     const char *fmt = "{\"a\":%d, \"b\":%u, \"c\":%ld, \"d\":%lu, \"e\":%M}";
-    assert(mjson_printf(&out, fmt, -1, 3456789012, (long) -1,
-                        (unsigned long) 3456789012, f1, 1234) == 60);
+    assert(mjson_printf(&mjson_print_dynamic_buf, &s, fmt, -1, 3456789012,
+                        (long)-1, (unsigned long)3456789012, f1, 1234) == 60);
     assert(s != NULL);
     str =
         "{\"a\":-1, \"b\":3456789012, \"c\":-1, \"d\":3456789012, "
@@ -308,8 +304,8 @@ static void test_printf(void) {
 
   {
     char *s = NULL;
-    struct mjson_out out = MJSON_OUT_DYNAMIC_BUF(&s);
-    assert(mjson_printf(&out, "[%.*Q,%.*s]", 2, "abc", 4, "truell") == 11);
+    assert(mjson_printf(&mjson_print_dynamic_buf, &s, "[%.*Q,%.*s]", 2, "abc",
+                        4, "truell") == 11);
     assert(s != NULL);
     str = "[\"ab\",true]";
     assert(memcmp(s, str, 11) == 0);
@@ -318,24 +314,26 @@ static void test_printf(void) {
 
   {
     char tmp[100], s[] = "0\n\xfeg";
-    struct mjson_out out = MJSON_OUT_FIXED_BUF(tmp, sizeof(tmp));
-    assert(mjson_printf(&out, "[%V,%V,%V,%V]", 1, s, 2, s, 3, s, 4, s) == 33);
+    struct mjson_fixedbuf fb = {tmp, sizeof(tmp), 0};
+    assert(mjson_printf(&mjson_print_fixed_buf, &fb, "[%V,%V,%V,%V]", 1, s, 2,
+                        s, 3, s, 4, s) == 33);
     str = "[\"MA==\",\"MAo=\",\"MAr+\",\"MAr+Zw==\"]";
     assert(memcmp(tmp, str, 33) == 0);
-    assert(out.u.fixed_buf.overflow == 0);
+    assert(fb.len < fb.size);
     // printf("%d [%.*s]\n", n, n, tmp);
   }
 
   {
-    struct mjson_out out = MJSON_OUT_FILE(stdout);
-    mjson_printf(&out, "{%Q:%Q}\n", "message", "well done, test passed");
+    // struct mjson_out out = MJSON_OUT_FILE(stdout);
+    mjson_printf(&mjson_print_file, stdout, "{%Q:%Q}\n", "message",
+                 "well done, test passed");
   }
 
   {
-    char tmp[100], s[] = "\"002001200220616263\"";
-    struct mjson_out out = MJSON_OUT_FIXED_BUF(tmp, sizeof(tmp));
-    memset(tmp, 0, sizeof(tmp));
-    assert(mjson_printf(&out, "%H", 9, "\x00 \x01 \x02 abc") == 20);
+    char tmp[100] = "", s[] = "\"002001200220616263\"";
+    struct mjson_fixedbuf fb = {tmp, sizeof(tmp), 0};
+    assert(mjson_printf(&mjson_print_fixed_buf, &fb, "%H", 9,
+                        "\x00 \x01 \x02 abc") == 20);
     assert(strcmp(tmp, s) == 0);
   }
 }

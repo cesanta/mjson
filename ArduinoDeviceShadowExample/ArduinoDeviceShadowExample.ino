@@ -1,4 +1,4 @@
-#include "mjson.c"  // Sketch -> Add File -> Add mjson.c
+#include "mjson.h" // Sketch -> Add File -> Add mjson.h
 
 static int ledOn = 0;  // Current LED status
 
@@ -13,20 +13,18 @@ static void reportState(void) {
                ledOn ? "true" : "false");
 }
 
+static void shadowDeltaHandler(struct jsonrpc_request *r) {
+  int ledOn = 0;
+  mjson_get_bool(r->params, r->params_len, "$.on", &ledOn);
+  digitalWrite(LED_BUILTIN,
+               ledOn);             // Set LED to the "on" value
+  reportState();                   // Let shadow know our new state
+  jsonrpc_return_success(r, NULL); // Report success
+}
+
 void setup() {
   jsonrpc_init(NULL, NULL);
-
-  // Export "Shadow.Delta". Pass a callback that updates ledOn
-  jsonrpc_export("Shadow.Delta",
-                 [](struct jsonrpc_request *r) {
-                   int ledOn = 0;
-                   mjson_get_bool(r->params, r->params_len, "$.on", &ledOn);
-                   digitalWrite(LED_BUILTIN,
-                                ledOn);  // Set LED to the "on" value
-                   reportState();        // Let shadow know our new state
-                   jsonrpc_return_success(r, NULL);  // Report success
-                 },
-                 NULL);
+  jsonrpc_export("Shadow.Delta", shadowDeltaHandler, NULL);
 
   pinMode(LED_BUILTIN, OUTPUT);  // Configure LED pin
   Serial.begin(115200);          // Init serial comms
