@@ -83,7 +83,15 @@ int mjson_get_base64(const char *s, int len, const char *path, char *to, int n);
 #endif
 
 #if MJSON_ENABLE_PRINT
+typedef int (*mjson_print_fn_t)(const char *buf, int len, void *userdata);
+typedef int (*mjson_vprint_fn_t)(va_list *, mjson_print_fn_t, void *);
 
+struct mjson_fixedbuf {
+  char *ptr;
+  int size, len, overflow;
+};
+
+#if 0
 struct mjson_out {
   int (*print)(struct mjson_out *, const char *buf, int len);
   union {
@@ -96,36 +104,16 @@ struct mjson_out {
     void *ptrs[2];
   } u;
 };
+#endif
 
-#define MJSON_OUT_FIXED_BUF(buf, buflen) \
-  {                                      \
-    mjson_print_fixed_buf, {             \
-      { (buf), (buflen), 0, 0 }          \
-    }                                    \
-  }
-
-#define MJSON_OUT_DYNAMIC_BUF(buf) \
-  {                                \
-    mjson_print_dynamic_buf, {     \
-      { (char *) (buf), 0, 0, 0 }  \
-    }                              \
-  }
-
-#define MJSON_OUT_FILE(fp)       \
-  {                              \
-    mjson_print_file, {          \
-      { (char *) (fp), 0, 0, 0 } \
-    }                            \
-  }
-
-int mjson_printf(struct mjson_out *out, const char *fmt, ...);
-int mjson_vprintf(struct mjson_out *out, const char *fmt, va_list ap);
-int mjson_print_str(struct mjson_out *out, const char *s, int len);
-int mjson_print_int(struct mjson_out *out, int value, int is_signed);
-int mjson_print_long(struct mjson_out *out, long value, int is_signed);
-int mjson_print_file(struct mjson_out *out, const char *ptr, int len);
-int mjson_print_fixed_buf(struct mjson_out *out, const char *ptr, int len);
-int mjson_print_dynamic_buf(struct mjson_out *out, const char *ptr, int len);
+int mjson_printf(mjson_print_fn_t, void *, const char *fmt, ...);
+int mjson_vprintf(mjson_print_fn_t, void *, const char *fmt, va_list ap);
+int mjson_print_str(mjson_print_fn_t, void *, const char *s, int len);
+int mjson_print_int(mjson_print_fn_t, void *, int value, int is_signed);
+int mjson_print_long(mjson_print_fn_t, void *, long value, int is_signed);
+int mjson_print_file(mjson_print_fn_t, void *, const char *ptr, int len);
+int mjson_print_fixed_buf(mjson_print_fn_t, void *, const char *ptr, int len);
+int mjson_print_dynamic_buf(mjson_print_fn_t, void *, const char *ptr, int len);
 
 #endif /* MJSON_ENABLE_PRINT */
 
@@ -139,7 +127,9 @@ struct jsonrpc_request {
   int params_len;         // Length of the "params"
   const char *id;         // Points to the "id" in the request frame
   int id_len;             // Length of the "id"
-  struct mjson_out *out;  // Output stream
+  mjson_print_fn_t pfn;   // Printer function
+  void *pfndata;          // Printer function data
+  // struct mjson_out *out;  // Output stream
   void *userdata;         // Callback's user data as specified at export time
 };
 
@@ -506,78 +496,85 @@ int ATTR mjson_get_base64(const char *s, int len, const char *path, char *to,
 #endif  // MJSON_ENABLE_BASE64
 
 #if MJSON_ENABLE_PRINT
-int ATTR mjson_print_fixed_buf(struct mjson_out *out, const char *ptr,
-                               int len) {
-  int i, left = out->u.fixed_buf.size - out->u.fixed_buf.len;
-  if (left < len) {
-    out->u.fixed_buf.overflow = 1;
-    len = left;
-  }
-  for (i = 0; i < len; i++) {
-    out->u.fixed_buf.ptr[out->u.fixed_buf.len + i] = ptr[i];
-  }
-  out->u.fixed_buf.len += len;
+int ATTR mjson_print_fixed_buf(mjson_print_fn_t fn, void *fndata,
+                               const char *ptr, int len) {
+  struct mjson_fixedbuf *fb = (struct mjson_fixedbuf *) fndata;
+  int i, left = fb->size - fb->len;
+  (void) fn;
+  if (left < len) len = left;
+  for (i = 0; i < len; i++) fb->ptr[fb->len + i] = ptr[i];
+  fb->len += len;
   return len;
 }
 
-int ATTR mjson_print_dynamic_buf(struct mjson_out *out, const char *ptr,
-                                 int len) {
-  char *s, *buf = *out->u.dynamic_buf;
+int ATTR mjson_print_dynamic_buf(mjson_print_fn_t fn, void *fndata,
+                                 const char *ptr, int len) {
+  char *s, *buf = *(char **) fndata;
   int curlen = buf == NULL ? 0 : strlen(buf);
-  if ((s = (char *) realloc(buf, curlen + len + 1)) == NULL) {
+  void *(*realloc_fn)(void *, size_t) = (void *(*) (void *, size_t)) fn;
+  if ((s = (char *) realloc_fn(buf, curlen + len + 1)) == NULL) {
     return 0;
   } else {
     memcpy(s + curlen, ptr, len);
     s[curlen + len] = '\0';
-    *out->u.dynamic_buf = s;
+    *(char **) fndata = s;
     return len;
   }
 }
 
-int ATTR mjson_print_file(struct mjson_out *out, const char *ptr, int len) {
-  return fwrite(ptr, 1, len, out->u.fp);
+int ATTR mjson_print_file(mjson_print_fn_t fn, void *fndata, const char *ptr,
+                          int len) {
+  int (*fwrite_fn)(const void *, int, int, void *) =
+      (int (*)(const void *, int, int, void *)) fn;
+  return fwrite_fn(ptr, 1, len, fndata);
 }
 
-int ATTR mjson_print_buf(struct mjson_out *out, const char *buf, int len) {
-  return out->print(out, buf, len);
+int ATTR mjson_print_buf(mjson_print_fn_t fn, void *fndata, const char *buf,
+                         int len) {
+  return fn(buf, len, fndata);
 }
 
-int ATTR mjson_print_int(struct mjson_out *out, int value, int is_signed) {
+int ATTR mjson_print_int(mjson_print_fn_t fn, void *fndata, int value,
+                         int is_signed) {
   char buf[20];
   const char *fmt = (is_signed ? "%d" : "%u");
   int len = snprintf(buf, sizeof(buf), fmt, value);
-  return out->print(out, buf, len);
+  return fn(buf, len, fndata);
 }
 
-int ATTR mjson_print_long(struct mjson_out *out, long value, int is_signed) {
+int ATTR mjson_print_long(mjson_print_fn_t fn, void *fndata, long value,
+                          int is_signed) {
   char buf[20];
   const char *fmt = (is_signed ? "%ld" : "%lu");
   int len = snprintf(buf, sizeof(buf), fmt, value);
-  return out->print(out, buf, len);
+  return fn(buf, len, fndata);
 }
 
-int ATTR mjson_print_dbl(struct mjson_out *out, double d, const char *fmt) {
+int ATTR mjson_print_dbl(mjson_print_fn_t fn, void *fndata, double d,
+                         const char *fmt) {
   char buf[40];
   int n = snprintf(buf, sizeof(buf), fmt, d);
-  return out->print(out, buf, n);
+  return fn(buf, n, fndata);
 }
 
-int ATTR mjson_print_str(struct mjson_out *out, const char *s, int len) {
-  int i, n = out->print(out, "\"", 1);
+int ATTR mjson_print_str(mjson_print_fn_t fn, void *fndata, const char *s,
+                         int len) {
+  int i, n = fn("\"", 1, fndata);
   for (i = 0; i < len; i++) {
     char c = mjson_esc(s[i], 1);
     if (c) {
-      n += out->print(out, "\\", 1);
-      n += out->print(out, &c, 1);
+      n += fn("\\", 1, fndata);
+      n += fn(&c, 1, fndata);
     } else {
-      n += out->print(out, &s[i], 1);
+      n += fn(&s[i], 1, fndata);
     }
   }
-  return n + out->print(out, "\"", 1);
+  return n + fn("\"", 1, fndata);
 }
 
 #if MJSON_ENABLE_BASE64
-int ATTR mjson_print_b64(struct mjson_out *out, const unsigned char *s, int n) {
+int ATTR mjson_print_b64(mjson_print_fn_t fn, void *fndata,
+                         const unsigned char *s, int n) {
   const char *t =
       "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
   int i, len = out->print(out, "\"", 1);
@@ -586,13 +583,12 @@ int ATTR mjson_print_b64(struct mjson_out *out, const unsigned char *s, int n) {
     char buf[4] = {t[a >> 2], t[(a & 3) << 4 | (b >> 4)], '=', '='};
     if (i + 1 < n) buf[2] = t[(b & 15) << 2 | (c >> 6)];
     if (i + 2 < n) buf[3] = t[c & 63];
-    len += out->print(out, buf, sizeof(buf));
+    len += fn(buf, sizeof(buf), fndata);
   }
-  return len + out->print(out, "\"", 1);
+  return len + fn("\"", 1, fndata);
 }
 #endif /* MJSON_ENABLE_BASE64 */
 
-typedef int (*mjson_printf_fn_t)(struct mjson_out *, va_list *);
 
 int ATTR mjson_vprintf(struct mjson_out *out, const char *fmt, va_list xap) {
   int i = 0, n = 0;
