@@ -40,7 +40,7 @@
 #endif
 
 #ifndef MJSON_RPC_IN_BUF_SIZE
-#define MJSON_RPC_IN_BUF_SIZE 256
+#define MJSON_RPC_IN_BUF_SIZE 2048
 #endif
 
 #ifndef ATTR
