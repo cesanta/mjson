@@ -101,7 +101,7 @@ int mjson_print_file(const char *ptr, int len, void *userdata);
 int mjson_print_fixed_buf(const char *ptr, int len, void *userdata);
 int mjson_print_dynamic_buf(const char *ptr, int len, void *userdata);
 
-#endif /* MJSON_ENABLE_PRINT */
+#endif // MJSON_ENABLE_PRINT
 
 #if MJSON_ENABLE_RPC
 
@@ -115,7 +115,6 @@ struct jsonrpc_request {
   int id_len;             // Length of the "id"
   mjson_print_fn_t fn;    // Printer function
   void *fndata;           // Printer function data
-  // struct mjson_out *out;  // Output stream
   void *userdata;         // Callback's user data as specified at export time
 };
 
@@ -127,10 +126,8 @@ struct jsonrpc_method {
   struct jsonrpc_method *next;
 };
 
-/*
- * Main RPC context, stores current request information and a list of
- * exported RPC methods.
- */
+// Main RPC context, stores current request information and a list of
+// exported RPC methods.
 struct jsonrpc_ctx {
   struct jsonrpc_method *methods;
   void *userdata;
@@ -139,7 +136,7 @@ struct jsonrpc_ctx {
   char in[MJSON_RPC_IN_BUF_SIZE];
 };
 
-/* Registers function fn under the given name within the given RPC context */
+// Registers function fn under the given name within the given RPC context
 #define jsonrpc_ctx_export(ctx, name, fn, ud)                                \
   do {                                                                       \
     static struct jsonrpc_method m = {(name), sizeof(name) - 1, (fn), 0, 0}; \
@@ -172,9 +169,13 @@ extern struct jsonrpc_ctx jsonrpc_default_context;
 #define jsonrpc_process_byte(x, fn, data) \
   jsonrpc_ctx_process_byte(&jsonrpc_default_context, (x), (fn), (data))
 
-#endif /* MJSON_ENABLE_RPC */
+#define JSONRPC_ERROR_INVALID -32700    /* Invalid JSON was received */
+#define JSONRPC_ERROR_NOT_FOUND -32601  /* The method does not exist */
+#define JSONRPC_ERROR_BAD_PARAMS -32602 /* Invalid params passed */
+#define JSONRPC_ERROR_INTERNAL -32603   /* Internal JSON-RPC error */
 
-#endif /* MJSON_H */
+#endif // MJSON_ENABLE_RPC
+#endif // MJSON_H
 
 #ifndef MJSON_API_ONLY
 
@@ -752,12 +753,6 @@ done:
 #endif
 
 #if MJSON_ENABLE_RPC
-/* Common JSON-RPC error codes */
-#define JSONRPC_ERROR_INVALID -32700    /* Invalid JSON was received */
-#define JSONRPC_ERROR_NOT_FOUND -32601  /* The method does not exist */
-#define JSONRPC_ERROR_BAD_PARAMS -32602 /* Invalid params passed */
-#define JSONRPC_ERROR_INTERNAL -32603   /* Internal JSON-RPC error */
-
 struct jsonrpc_ctx jsonrpc_default_context;
 struct jsonrpc_userdata {
   mjson_print_fn_t fn;
@@ -773,9 +768,6 @@ int ATTR jsonrpc_call(mjson_print_fn_t fn, void *fndata, const char *fmt, ...) {
   va_list ap;
   int len;
   char ch = '\n';
-  // struct mjson_out out = {jsonrpc_printer, {{0, 0, 0, 0}}};
-  // out.u.ptrs[0] = (void *) fn;
-  // out.u.ptrs[1] = fndata;
   va_start(ap, fmt);
   len = mjson_vprintf(fn, fndata, fmt, ap);
   va_end(ap);

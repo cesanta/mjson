@@ -49,25 +49,27 @@ assert(mjson_find(s, len, "$", &p, &n) == MJSON_TOK_OBJECT);
 ## mjson_get_number()
 
 ```c
-double mjson_get_number(const char *s, int len, const char *path, double default_val);
+int mjson_get_number(const char *s, int len, const char *path, double *v);
 ```
 
-In a JSON string `s`, `len`, return a number value by its JSONPATH `path`.
-If not found, return `default_val`. Example:
+In a JSON string `s`, `len`, find a number value by its JSONPATH `path` and
+store into `v`. Return 0 if the value was not found, non-0 if found and stored.
+Example:
 
 ```c
 // s, len is a JSON string: {"foo": { "bar": [ 1, 2, 3] }, "baz": true} 
-double v = mjson_get_number(s, len, "$.foo.bar[1]", 0);  // Assigns to 2
+double v = 0;
+mjson_get_number(s, len, "$.foo.bar[1]", &v);  // v now holds 2
 ```
 
 ## mjson_get_bool()
 
 ```c
-int mjson_get_bool(const char *s, int len, const char *path, int default_val);
+int mjson_get_bool(const char *s, int len, const char *path, int *v);
 ```
 
-In a JSON string `s`, `len`, return a value of a boolean by its JSONPATH `path`.
-If not found, return `default_val`. Example:
+In a JSON string `s`, `len`, store value of a boolean by its JSONPATH `path`
+into a variable `v`. Return 0 if not found, non-0 otherwise. Example:
 
 ```c
 // s, len is a JSON string: {"foo": { "bar": [ 1, 2, 3] }, "baz": true} 
@@ -81,7 +83,7 @@ int mjson_get_string(const char *s, int len, const char *path, char *to, int sz)
 ```
 In a JSON string `s`, `len`, find a string by its JSONPATH `path` and unescape
 it into a buffer `to`, `sz` with terminating `\0`.
-If a string is not found, return 0.
+If a string is not found, return -1.
 If a string is found, return the length of unescaped string. Example:
 
 ```c
