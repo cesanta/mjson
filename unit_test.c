@@ -172,6 +172,18 @@ static void test_get_string(void) {
   }
 
   {
+    struct {
+      char buf1[3], buf2[3];
+    } foo;
+    const char *s = "{\"a\":\"0123456789\"}";
+    memset(&foo, 0, sizeof(foo));
+    assert(mjson_get_string(s, strlen(s), "$.a", foo.buf1, sizeof(foo.buf1)) ==
+           -1);
+    assert(foo.buf1[0] == '0' && foo.buf1[2] == '2');
+    assert(foo.buf2[0] == '\0');
+  }
+
+  {
     const char *s = "[\"MA==\",\"MAo=\",\"MAr+\",\"MAr+Zw==\"]";
     assert(mjson_get_base64(s, strlen(s), "$[0]", buf, sizeof(buf)) == 1);
     assert(strcmp(buf, "0") == 0);
