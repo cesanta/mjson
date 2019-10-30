@@ -336,6 +336,13 @@ static void test_printf(void) {
                         "\x00 \x01 \x02 abc") == 20);
     assert(strcmp(tmp, s) == 0);
   }
+
+  {
+    char tmp[100] = "", s[] = "\"a/b\\nc\"";
+    struct mjson_fixedbuf fb = {tmp, sizeof(tmp), 0};
+    assert(mjson_printf(&mjson_print_fixed_buf, &fb, "%Q", "a/b\nc") == 8);
+    assert(strcmp(tmp, s) == 0);
+  }
 }
 
 static void foo(struct jsonrpc_request *r) {
