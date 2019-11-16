@@ -243,7 +243,7 @@ static void test_print(void) {
 
   {
     struct mjson_fixedbuf fb = {tmp, sizeof(tmp), 0};
-    assert(mjson_print_int(&mjson_print_fixed_buf, &fb, (int)3456789012, 0) ==
+    assert(mjson_print_int(&mjson_print_fixed_buf, &fb, (int) 3456789012, 0) ==
            10);
     assert(memcmp(tmp, "3456789012", 10) == 0);
     assert(fb.len < fb.size);
@@ -292,6 +292,16 @@ static void test_printf(void) {
   }
 
   {
+    char tmp[20];
+    struct mjson_fixedbuf fb = {tmp, sizeof(tmp), 0};
+    str = "{\"a\":\"\"}";
+    assert(mjson_printf(&mjson_print_fixed_buf, &fb, "{%Q:%Q}", "a", NULL) ==
+           (int) strlen(str));
+    assert(memcmp(tmp, str, strlen(str)) == 0);
+    assert(fb.len < fb.size);
+  }
+
+  {
     char *s = NULL;
     assert(mjson_printf(&mjson_print_dynamic_buf, &s, "{%Q:%d, %Q:[%s]}", "a",
                         1, "b", "null") == 19);
@@ -305,7 +315,7 @@ static void test_printf(void) {
     char *s = NULL;
     const char *fmt = "{\"a\":%d, \"b\":%u, \"c\":%ld, \"d\":%lu, \"e\":%M}";
     assert(mjson_printf(&mjson_print_dynamic_buf, &s, fmt, -1, 3456789012,
-                        (long)-1, (unsigned long)3456789012, f1, 1234) == 60);
+                        (long) -1, (unsigned long) 3456789012, f1, 1234) == 60);
     assert(s != NULL);
     str =
         "{\"a\":-1, \"b\":3456789012, \"c\":-1, \"d\":3456789012, "

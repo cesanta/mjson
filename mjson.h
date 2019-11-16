@@ -101,7 +101,7 @@ int mjson_print_file(const char *ptr, int len, void *userdata);
 int mjson_print_fixed_buf(const char *ptr, int len, void *userdata);
 int mjson_print_dynamic_buf(const char *ptr, int len, void *userdata);
 
-#endif // MJSON_ENABLE_PRINT
+#endif  // MJSON_ENABLE_PRINT
 
 #if MJSON_ENABLE_RPC
 
@@ -109,13 +109,13 @@ void jsonrpc_init(void (*response_cb)(const char *, int, void *),
                   void *userdata);
 
 struct jsonrpc_request {
-  const char *params;     // Points to the "params" in the request frame
-  int params_len;         // Length of the "params"
-  const char *id;         // Points to the "id" in the request frame
-  int id_len;             // Length of the "id"
-  mjson_print_fn_t fn;    // Printer function
-  void *fndata;           // Printer function data
-  void *userdata;         // Callback's user data as specified at export time
+  const char *params;   // Points to the "params" in the request frame
+  int params_len;       // Length of the "params"
+  const char *id;       // Points to the "id" in the request frame
+  int id_len;           // Length of the "id"
+  mjson_print_fn_t fn;  // Printer function
+  void *fndata;         // Printer function data
+  void *userdata;       // Callback's user data as specified at export time
 };
 
 struct jsonrpc_method {
@@ -174,8 +174,8 @@ extern struct jsonrpc_ctx jsonrpc_default_context;
 #define JSONRPC_ERROR_BAD_PARAMS -32602 /* Invalid params passed */
 #define JSONRPC_ERROR_INTERNAL -32603   /* Internal JSON-RPC error */
 
-#endif // MJSON_ENABLE_RPC
-#endif // MJSON_H
+#endif  // MJSON_ENABLE_RPC
+#endif  // MJSON_H
 
 #ifndef MJSON_API_ONLY
 
@@ -495,7 +495,7 @@ int ATTR mjson_print_fixed_buf(const char *ptr, int len, void *fndata) {
 int ATTR mjson_print_dynamic_buf(const char *ptr, int len, void *fndata) {
   char *s, *buf = *(char **) fndata;
   int curlen = buf == NULL ? 0 : strlen(buf);
-  if ((s = (char *)realloc(buf, curlen + len + 1)) == NULL) {
+  if ((s = (char *) realloc(buf, curlen + len + 1)) == NULL) {
     return 0;
   } else {
     memcpy(s + curlen, ptr, len);
@@ -506,7 +506,7 @@ int ATTR mjson_print_dynamic_buf(const char *ptr, int len, void *fndata) {
 }
 
 int ATTR mjson_print_file(const char *ptr, int len, void *userdata) {
-  return fwrite(ptr, 1, len, (FILE *)userdata);
+  return fwrite(ptr, 1, len, (FILE *) userdata);
 }
 
 int ATTR mjson_print_buf(mjson_print_fn_t fn, void *fndata, const char *buf,
@@ -583,7 +583,7 @@ int ATTR mjson_vprintf(mjson_print_fn_t fn, void *fndata, const char *fmt,
       }
       if (fc == 'Q') {
         char *buf = va_arg(ap, char *);
-        n += mjson_print_str(fn, fndata, buf, strlen(buf));
+        n += mjson_print_str(fn, fndata, buf ? buf : "", buf ? strlen(buf) : 0);
       } else if (strncmp(&fmt[i], ".*Q", 3) == 0) {
         int len = va_arg(ap, int);
         char *buf = va_arg(ap, char *);
@@ -618,7 +618,7 @@ int ATTR mjson_vprintf(mjson_print_fn_t fn, void *fndata, const char *fmt,
       } else if (fc == 'V') {
         int len = va_arg(ap, int);
         const char *buf = va_arg(ap, const char *);
-        n += mjson_print_b64(fn, fndata, (unsigned char *)buf, len);
+        n += mjson_print_b64(fn, fndata, (unsigned char *) buf, len);
 #endif
       } else if (fc == 'H') {
         const char *hex = "0123456789abcdef";
@@ -760,7 +760,7 @@ struct jsonrpc_userdata {
 };
 
 static int ATTR jsonrpc_printer(const char *buf, int len, void *userdata) {
-  struct jsonrpc_userdata *u = (struct jsonrpc_userdata *)userdata;
+  struct jsonrpc_userdata *u = (struct jsonrpc_userdata *) userdata;
   return u->fn(buf, len, u->fndata);
 }
 
@@ -869,8 +869,7 @@ static int ATTR jsonrpc_print_methods(mjson_print_fn_t fn, void *fndata,
   struct jsonrpc_method *m;
   int len = 0;
   for (m = ctx->methods; m != NULL; m = m->next) {
-    if (m != ctx->methods)
-      len += mjson_print_buf(fn, fndata, ",", 1);
+    if (m != ctx->methods) len += mjson_print_buf(fn, fndata, ",", 1);
     len += mjson_print_str(fn, fndata, m->method, strlen(m->method));
   }
   return len;
