@@ -6,12 +6,13 @@
 
 # Features
 
-- Tiny footprint, single-file ISO C / ISO C++ library
+- Small, ~1k lines of code single header with no dependencies
 - State machine parser, no allocations, no recursion
 - High level API - fetch from JSON directly into C/C++ by
     [jsonpath](https://github.com/json-path/JsonPath)
 - Low level SAX API
 - Flexible JSON generation API - print to buffer, file, socket, etc
+- JSON-RPC client/server, suitable for the [Cloud Connector](https://mdash.net/home/cloud-connector/)
 
 # Build options
 
