@@ -5,7 +5,7 @@ GCOVCMD ?= true
 ifeq ($(shell uname -s),Darwin)
 ifeq ($(CC),clang)
 	EXTRA = -coverage
-	GCOVCMD = gcov unit_test.c ; bash <(curl -s https://codecov.io/bash)
+	GCOVCMD = gcov unit_test.c ; curl -s https://codecov.io/bash | /bin/bash
 endif
 endif
 
