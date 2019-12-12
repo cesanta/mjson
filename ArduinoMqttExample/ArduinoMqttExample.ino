@@ -5,12 +5,21 @@ static int wfn(const char *frame, int frame_len, void *privdata) {
   return Serial.write(frame, frame_len);
 }
 
-// Catch MQTT messages on topic "ccm/led", and switch LED on/off
+// Catch MQTT messages on topic "ccm/led", and switch LED on/off.
+// Cloud connector forwards us MQTT messages as RPC frames like this:
+// {"method": "MQTT.Message", "params": {"topic": "ccm/led", "message": "1"}}
 static void mqtt_cb(struct jsonrpc_request *r) {
-  char topic[100] = "", message[100] = ""; 
-  mjson_get_string(r->params, r->params_len, "$.topic", topic, sizeof(topic));
-  mjson_get_string(r->params, r->params_len, "$.message", message, sizeof(message));
-  if (strcmp(topic, "ccm/led") == 0) pinMode(LED_BUILTIN, atoi(message));
+  char msg[100] = ""; 
+  mjson_get_string(r->params, r->params_len, "$.message", msg, sizeof(msg));
+  digitalWrite(LED_BUILTIN, atoi(msg));  // message is either "0" or "1"
+}
+
+// Each time Cloud Connector boots, it sends "Sys.Init" to the host controller.
+// Host controller can use it to do run-time initialisation of Cloud Connector.
+// In our case, we subscribe to the "ccm/led" MQTT topic.
+static void sys_init_cb(struct jsonrpc_request *r) {
+  jsonrpc_call(wfn, NULL, "{%Q: %Q, %Q: {%Q: %Q}}", 
+               "method", "MQTT.Sub", "params", "topic", "ccm/led");
 }
 
 void setup() {
@@ -18,19 +27,23 @@ void setup() {
 	pinMode(LED_BUILTIN, OUTPUT);  // Configure LED pin
   jsonrpc_init(NULL, NULL);      // Init JSON-RPC engine
   jsonrpc_export("MQTT.Message", mqtt_cb, NULL); // Set MQTT message callback
-  jsonrpc_call(wfn, NULL,
-               "{\"method\":\"MQTT.Sub\",\"params\":{\"topic\":\"ccm/#\"}}");
+  jsonrpc_export("Sys.Init", sys_init_cb, NULL); // Set init callback
+  sys_init_cb(NULL);
 }
 
 void loop() {
+  // Read serial input from Cloud Connector byte by byte into an input buffer.
+  // When a complete JSON-RPC frame is received, call handler function.
   while (Serial.available() > 0) jsonrpc_process_byte(Serial.read(), wfn, NULL);
 
-  // Publish to MQTT periodically
+  // Publish to MQTT approximately every 5000 milliseconds.
+  // Topic: "ccm/data", message: current uptime in milliseconds.
   static unsigned long old, now;
   now = millis();
   if (old > now || old + 5000 < now) {
     old = now;
-    jsonrpc_call(wfn, NULL, "{\"method\":\"MQTT.Pub\",\"params\":"
-                 "{\"topic\":\"ccm/data\",\"message\":%lu}}", now);
+    jsonrpc_call(wfn, NULL, "{%Q: %Q, %Q: {%Q: %Q, %Q: %lu}}", 
+                 "method", "MQTT.Pub", "params", "topic", "ccm/data",
+                 "message", now);
   }
 }
