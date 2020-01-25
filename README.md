@@ -272,9 +272,11 @@ void jsonrpc_return_error(struct jsonrpc_request *r, int code, const char *messa
 ```
 
 Return error from the method handler. JSON-RPC error frame looks like this:
-  ```json
-	{"id":1, "error": {"code": -32602, "message": "Invalid params", "data": {"foo": "bar"}}}
-	```
+
+```json
+{"id":1, "error": {"code": -32602, "message": "Invalid params", "data": {"foo": "bar"}}}
+```
+
 The frame contains a `error` object with numeric `code` and string `message`
 keys, and an optional `data` which can be arbitrary - a simple JSON type,
 or an array/object. In the optional `data`, you can pass some extra information
