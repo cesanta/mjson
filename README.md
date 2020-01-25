@@ -12,7 +12,7 @@
     [jsonpath](https://github.com/json-path/JsonPath)
 - Low level SAX API
 - Flexible JSON generation API - print to buffer, file, socket, etc
-- JSON-RPC client/server, suitable for the [Cloud Connector](https://mdash.net/home/cloud-connector/)
+- JSON-RPC client/server. Connects any microcontroller online via https://vcon.io
 
 # Build options
 
