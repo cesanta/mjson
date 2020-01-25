@@ -442,10 +442,9 @@ static void test_rpc(void) {
 
 	{
 		// Test simple error response, without data
-    jsonrpc_ctx_export(ctx, "foo1", foo1, NULL);
     const char *req = "{\"id\": 3, \"method\": \"foo1\",\"params\":[1,true]}\n";
     const char *reply = "{\"id\":3,\"error\":{\"code\":123,\"message\":\"\"}}\n";
-    jsonrpc_ctx_export(ctx, "foo", foo, (void *) "hi");
+    jsonrpc_ctx_export(ctx, "foo1", foo1, NULL);
     out[0] = '\0';
     process_str(ctx, req);
 		//printf("--->\n%s%s\n", out, reply);
@@ -454,10 +453,9 @@ static void test_rpc(void) {
 
 	{
 		// Test more complex error response, with data
-    jsonrpc_ctx_export(ctx, "foo2", foo2, NULL);
     const char *req = "{\"id\": 3, \"method\": \"foo2\",\"params\":[1,true]}\n";
     const char *reply = "{\"id\":3,\"error\":{\"code\":456,\"message\":\"qwerty\",\"data\":[1,true]}}\n";
-    jsonrpc_ctx_export(ctx, "foo", foo, (void *) "hi");
+    jsonrpc_ctx_export(ctx, "foo2", foo2, NULL);
     out[0] = '\0';
     process_str(ctx, req);
 		//printf("--->\n%s%s\n", out, reply);
