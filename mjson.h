@@ -150,7 +150,7 @@ void jsonrpc_ctx_init(struct jsonrpc_ctx *ctx,
                       void *userdata);
 int jsonrpc_call(mjson_print_fn_t fn, void *fndata, const char *fmt, ...);
 void jsonrpc_return_error(struct jsonrpc_request *r, int code,
-                          const char *message_fmt, ...);
+                          const char *message, const char *data_fmt, ...);
 void jsonrpc_return_success(struct jsonrpc_request *r, const char *result_fmt,
                             ...);
 void jsonrpc_ctx_process(struct jsonrpc_ctx *ctx, char *req, int req_sz,
@@ -776,24 +776,24 @@ int ATTR jsonrpc_call(mjson_print_fn_t fn, void *fndata, const char *fmt, ...) {
 }
 
 void ATTR jsonrpc_return_errorv(struct jsonrpc_request *r, int code,
-                                const char *message_fmt, va_list ap) {
+                                const char *message, const char *data_fmt,
+                                va_list ap) {
   if (r->id_len == 0) return;
   mjson_printf(r->fn, r->fndata,
-               "{\"id\":%.*s,\"error\":{\"code\":%d,\"message\":", r->id_len,
-               r->id, code);
-  if (message_fmt != NULL) {
-    mjson_vprintf(r->fn, r->fndata, message_fmt, ap);
-  } else {
-    mjson_printf(r->fn, r->fndata, "%s", "\"\"");
+               "{\"id\":%.*s,\"error\":{\"code\":%d,\"message\":%Q", r->id_len,
+               r->id, code, message == NULL ? "" : message);
+  if (data_fmt != NULL) {
+  	mjson_printf(r->fn, r->fndata, ",\"data\":");
+    mjson_vprintf(r->fn, r->fndata, data_fmt, ap);
   }
   mjson_printf(r->fn, r->fndata, "}}\n");
 }
 
 void ATTR jsonrpc_return_error(struct jsonrpc_request *r, int code,
-                               const char *message_fmt, ...) {
+                               const char *message, const char *data_fmt, ...) {
   va_list ap;
-  va_start(ap, message_fmt);
-  jsonrpc_return_errorv(r, code, message_fmt, ap);
+  va_start(ap, data_fmt);
+  jsonrpc_return_errorv(r, code, message, data_fmt, ap);
   va_end(ap);
 }
 
@@ -859,7 +859,7 @@ void ATTR jsonrpc_ctx_process(struct jsonrpc_ctx *ctx, char *req, int req_sz,
     }
   }
   if (m == NULL) {
-    jsonrpc_return_error(&r, JSONRPC_ERROR_NOT_FOUND, "%Q", "method not found");
+    jsonrpc_return_error(&r, JSONRPC_ERROR_NOT_FOUND, "method not found", NULL);
   }
 }
 

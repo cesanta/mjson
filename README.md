@@ -267,10 +267,19 @@ is not specified, this function does nothing.
 ## jsonrpc_return_error
 
 ```c
-void jsonrpc_return_error(struct jsonrpc_request *r, int code, const char *message_fmt, ...);
+void jsonrpc_return_error(struct jsonrpc_request *r, int code, const char *message, const char *data_fmt, ...);
 ```
 
-Return error from the method handler. NOTE: if the request frame ID
+Return error from the method handler. JSON-RPC error frame looks like this:
+  ```json
+	{"id":1, "error": {"code": -32602, "message": "Invalid params", "data": {"foo": "bar"}}}
+	```
+The frame contains a `error` object with numeric `code` and string `message`
+keys, and an optional `data` which can be arbitrary - a simple JSON type,
+or an array/object. In the optional `data`, you can pass some extra information
+about the error, for example a faulty request.
+
+NOTE: if the request frame ID
 is not specified, this function does nothing.
 
 

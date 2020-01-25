@@ -373,6 +373,14 @@ static void foo(struct jsonrpc_request *r) {
   jsonrpc_return_success(r, "{%Q:%g,%Q:%Q}", "x", v, "ud", r->userdata);
 }
 
+static void foo1(struct jsonrpc_request *r) {
+  jsonrpc_return_error(r, 123, "", NULL);
+}
+
+static void foo2(struct jsonrpc_request *r) {
+  jsonrpc_return_error(r, 456, "qwerty", "%.*s", r->params_len, r->params);
+}
+
 #define OUTLEN 200
 static int sender(const char *buf, int len, void *privdata) {
   char *dst = (char *) privdata;
@@ -406,9 +414,10 @@ static void test_rpc(void) {
 
   {
     // Call non-existent method
+    const char *reply = "{\"id\":1,\"error\":{\"code\":-32601,\"message\":\"method not found\"}}\n";
     out[0] = '\0';
     process_str(ctx, "{\"id\": 1, \"method\": \"foo\"}\n");
-    assert(strstr(out, "-32601") != NULL);
+    assert(strcmp(out, reply) == 0);
   }
 
   {
@@ -430,6 +439,30 @@ static void test_rpc(void) {
     // printf("--> [%s]\n", out);
     assert(strcmp(out, reply) == 0);
   }
+
+	{
+		// Test simple error response, without data
+    jsonrpc_ctx_export(ctx, "foo1", foo1, NULL);
+    const char *req = "{\"id\": 3, \"method\": \"foo1\",\"params\":[1,true]}\n";
+    const char *reply = "{\"id\":3,\"error\":{\"code\":123,\"message\":\"\"}}\n";
+    jsonrpc_ctx_export(ctx, "foo", foo, (void *) "hi");
+    out[0] = '\0';
+    process_str(ctx, req);
+		//printf("--->\n%s%s\n", out, reply);
+    assert(strcmp(out, reply) == 0);
+	}
+
+	{
+		// Test more complex error response, with data
+    jsonrpc_ctx_export(ctx, "foo2", foo2, NULL);
+    const char *req = "{\"id\": 3, \"method\": \"foo2\",\"params\":[1,true]}\n";
+    const char *reply = "{\"id\":3,\"error\":{\"code\":456,\"message\":\"qwerty\",\"data\":[1,true]}}\n";
+    jsonrpc_ctx_export(ctx, "foo", foo, (void *) "hi");
+    out[0] = '\0';
+    process_str(ctx, req);
+		//printf("--->\n%s%s\n", out, reply);
+    assert(strcmp(out, reply) == 0);
+	}
 
   {
     // Test notify
