@@ -640,6 +640,7 @@ int ATTR mjson_vprintf(mjson_print_fn_t fn, void *fndata, const char *fmt,
     }
   }
   va_end(xap);
+  va_end(ap);
   return n;
 }
 
