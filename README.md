@@ -93,6 +93,27 @@ char buf[100];
 int n = mjson_get_string(s, len, "$[1]", buf, sizeof(buf));  // Assigns to 4
 ```
 
+## mjson_get_hex()
+
+```c
+int mjson_get_hex(const char *s, int len, const char *path, char *to, int sz);
+```
+
+In a JSON string `s`, `len`, find a string by its JSONPATH `path` and
+hex decode it into a buffer `to`, `sz` with terminating `\0`.
+If a string is not found, return -1.
+If a string is found, return the length of decoded string.
+The hex string should be lowercase, e.g. string `Hello` is hex-encoded as
+`"48656c6c6f"`.  Example:
+
+```c
+// s, len is a JSON string [ "48656c6c6f" ]
+char buf[100];
+int n = mjson_get_hex(s, len, "$[0]", buf, sizeof(buf));  // Assigns to 5
+```
+
+
+
 ## mjson_get_base64()
 
 ```c

@@ -77,6 +77,7 @@ enum mjson_tok mjson_find(const char *s, int len, const char *jp,
 int mjson_get_number(const char *s, int len, const char *path, double *v);
 int mjson_get_bool(const char *s, int len, const char *path, int *v);
 int mjson_get_string(const char *s, int len, const char *path, char *to, int n);
+int mjson_get_hex(const char *s, int len, const char *path, char *to, int n);
 
 #if MJSON_ENABLE_BASE64
 int mjson_get_base64(const char *s, int len, const char *path, char *to, int n);
@@ -435,6 +436,20 @@ int ATTR mjson_get_string(const char *s, int len, const char *path, char *to,
   int sz;
   if (mjson_find(s, len, path, &p, &sz) != MJSON_TOK_STRING) return -1;
   return mjson_unescape(p + 1, sz - 2, to, n);
+}
+
+int ATTR mjson_get_hex(const char *s, int len, const char *x, char *to, int n) {
+  const char *p;
+  int i, j, sz;
+  if (mjson_find(s, len, x, &p, &sz) != MJSON_TOK_STRING) return -1;
+  for (i = j = 0; i < sz - 3 && j < n; i += 2, j++) {
+#define HEXTOI(x) (x >= '0' && x <= '9' ? x - '0' : x - 'W')
+    unsigned char a = *(const unsigned char *) (p + i + 1);
+    unsigned char b = *(const unsigned char *) (p + i + 2);
+    ((unsigned char *) to)[j] = (HEXTOI(a) << 4) | HEXTOI(b);
+  }
+  if (j < n) to[j] = '\0';
+  return j;
 }
 
 #if MJSON_ENABLE_BASE64
