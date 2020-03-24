@@ -194,6 +194,15 @@ static void test_get_string(void) {
     assert(mjson_get_base64(s, strlen(s), "$[3]", buf, sizeof(buf)) == 4);
     assert(strcmp(buf, "0\n\xfeg") == 0);
   }
+
+  {
+    const char *s = "[\"200a\",\"fe31\",123]";
+    assert(mjson_get_hex(s, strlen(s), "$[0]", buf, sizeof(buf)) == 2);
+    assert(strcmp(buf, " \n") == 0);
+    assert(mjson_get_hex(s, strlen(s), "$[1]", buf, sizeof(buf)) == 2);
+    assert(strcmp(buf, "\xfe\x31") == 0);
+    assert(mjson_get_hex(s, strlen(s), "$[2]", buf, sizeof(buf)) < 0);
+  }
 }
 
 static void test_print(void) {
