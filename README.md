@@ -162,11 +162,12 @@ Print using `printf()`-like format string. Supported specifiers are:
 - `%.*Q` print quoted escaped string. Expect `int, char *`
 - `%s` print string as is. Expect NUL-terminated `char *`
 - `%.*s` print string as is. Expect `int, char *`
-- `%g` print floating point number. Expect `double`
-- `%d`/`%u` print signed/unsigned integer. Expect `int`
-- `%ld`/`%lu` print signed/unsigned long integer. Expect `long`
+- `%g`, `%f` print floating point number. Expect `double`
+- `%d`, `%u` print signed/unsigned integer. Expect `int`
+- `%ld`, `%lu` print signed/unsigned long integer. Expect `long`
 - `%B` print `true` or `false`. Expect `int`
 - `%V` print quoted base64-encoded string. Expect `int, char *`
+- `%H` print quoted hex-encoded string. Expect `int, char *`
 - `%M` print using custom print function. Expect `int (*)(mjson_print_fn_t, void *, va_list *)`
 
 The following example produces `{"a":1, "b":[1234]}` into the
