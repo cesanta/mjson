@@ -500,47 +500,38 @@ static void test_merge(void) {
 
 static void test_pretty(void) {
   char buf[512];
-  {
-    const char *s = "{   }";
-    const char *expected = "{}";
+  size_t i;
+  const char *tests[] = {
+      "{   }",  // Empty object
+      "{}",
+      "{}",
+      "[   ]",  // Empty array
+      "[]",
+      "[]",
+      "{ \"a\" :1    }",  // Simple object
+      "{\n  \"a\": 1\n}",
+      "{\"a\":1}",
+      "{ \"a\" :1  ,\"b\":2}",  // Simple object, 2 keys
+      "{\n  \"a\": 1,\n  \"b\": 2\n}",
+      "{\"a\":1,\"b\":2}",
+      "{ \"a\" :1  ,\"b\":2, \"c\":[1,2,{\"d\":3}]}",  // Complex object
+      "{\n  \"a\": 1,\n  \"b\": 2,\n  \"c\": [\n"
+      "    1,\n    2,\n    {\n      \"d\": 3\n    }\n  ]\n}",
+      "{\"a\":1,\"b\":2,\"c\":[1,2,{\"d\":3}]}",
+  };
+
+  for (i = 0; i < sizeof(tests) / sizeof(tests[0]); i += 3) {
     struct mjson_fixedbuf fb = {buf, sizeof(buf), 0};
+    const char *s = tests[i];
     assert(mjson_pretty(s, strlen(s), "  ", mjson_print_fixed_buf, &fb) > 0);
-    assert(fb.len == (int) strlen(expected));
-    assert(strncmp(fb.ptr, expected, fb.len) == 0);
-  }
-  {
-    const char *s = "[   ]";
-    const char *expected = "[]";
-    struct mjson_fixedbuf fb = {buf, sizeof(buf), 0};
-    assert(mjson_pretty(s, strlen(s), "  ", mjson_print_fixed_buf, &fb) > 0);
-    assert(fb.len == (int) strlen(expected));
-    assert(strncmp(fb.ptr, expected, fb.len) == 0);
-  }
-  {
-    const char *s = "{ \"a\" :1}";
-    const char *expected = "{\n  \"a\": 1\n}";
-    struct mjson_fixedbuf fb = {buf, sizeof(buf), 0};
-    assert(mjson_pretty(s, strlen(s), "  ", mjson_print_fixed_buf, &fb) > 0);
-    assert(fb.len == (int) strlen(expected));
-    assert(strncmp(fb.ptr, expected, fb.len) == 0);
-  }
-  {
-    const char *s = "{ \"a\" :1  ,\"b\":2}";
-    const char *expected = "{\n  \"a\": 1,\n  \"b\": 2\n}";
-    struct mjson_fixedbuf fb = {buf, sizeof(buf), 0};
-    assert(mjson_pretty(s, strlen(s), "  ", mjson_print_fixed_buf, &fb) > 0);
-    assert(fb.len == (int) strlen(expected));
-    assert(strncmp(fb.ptr, expected, fb.len) == 0);
-  }
-  {
-    const char *s = "{ \"a\" :1  ,\"b\":2, \"c\":[1,2,{\"d\":3}]}";
-    const char *expected =
-        "{\n  \"a\": 1,\n  \"b\": 2,\n  \"c\": [\n"
-        "    1,\n    2,\n    {\n      \"d\": 3\n    }\n  ]\n}";
-    struct mjson_fixedbuf fb = {buf, sizeof(buf), 0};
-    assert(mjson_pretty(s, strlen(s), "  ", mjson_print_fixed_buf, &fb) > 0);
-    assert(fb.len == (int) strlen(expected));
-    assert(strncmp(fb.ptr, expected, fb.len) == 0);
+    assert(fb.len == (int) strlen(tests[i + 1]));
+    assert(strncmp(fb.ptr, tests[i + 1], fb.len) == 0);
+
+    // Terse print
+    fb.len = 0;
+    assert(mjson_pretty(s, strlen(s), "", mjson_print_fixed_buf, &fb) > 0);
+    assert(fb.len == (int) strlen(tests[i + 2]));
+    assert(strncmp(fb.ptr, tests[i + 2], fb.len) == 0);
   }
 }
 

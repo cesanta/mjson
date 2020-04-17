@@ -807,6 +807,7 @@ struct prettydata {
   int len;
   int prev;
   const char *pad;
+  int padlen;
   mjson_print_fn_t fn;
   void *userdata;
 };
@@ -823,30 +824,38 @@ static void pretty_cb(int ev, const char *s, int off, int len, void *ud) {
     case '}':
     case ']':
       d->level--;
-      if (d->prev != '[' && d->prev != '{') {
+      if (d->prev != '[' && d->prev != '{' && d->padlen > 0) {
         d->len += d->fn("\n", 1, d->userdata);
-        for (i = 0; i < d->level; i++) d->len += d->fn("  ", 2, d->userdata);
+        for (i = 0; i < d->level; i++)
+          d->len += d->fn(d->pad, d->padlen, d->userdata);
       }
       d->len += d->fn(s + off, len, d->userdata);
       break;
     case ',':
-      d->len += d->fn(",\n", 2, d->userdata);
-      for (i = 0; i < d->level; i++) d->len += d->fn("  ", 2, d->userdata);
+      d->len += d->fn(s + off, len, d->userdata);
+      if (d->padlen > 0) {
+        d->len += d->fn("\n", 1, d->userdata);
+        for (i = 0; i < d->level; i++)
+          d->len += d->fn(d->pad, d->padlen, d->userdata);
+      }
       break;
     case ':':
-      d->len += d->fn(": ", 2, d->userdata);
+      d->len += d->fn(s + off, len, d->userdata);
+      if (d->padlen > 0) d->len += d->fn(" ", 1, d->userdata);
       break;
     case MJSON_TOK_KEY:
-      if (d->prev == '{') {
+      if (d->prev == '{' && d->padlen > 0) {
         d->len += d->fn("\n", 1, d->userdata);
-        for (i = 0; i < d->level; i++) d->len += d->fn("  ", 2, d->userdata);
+        for (i = 0; i < d->level; i++)
+          d->len += d->fn(d->pad, d->padlen, d->userdata);
       }
       d->len += d->fn(s + off, len, d->userdata);
       break;
     default:
-      if (d->prev == '[') {
+      if (d->prev == '[' && d->padlen > 0) {
         d->len += d->fn("\n", 1, d->userdata);
-        for (i = 0; i < d->level; i++) d->len += d->fn("  ", 2, d->userdata);
+        for (i = 0; i < d->level; i++)
+          d->len += d->fn(d->pad, d->padlen, d->userdata);
       }
       d->len += d->fn(s + off, len, d->userdata);
       break;
@@ -856,7 +865,7 @@ static void pretty_cb(int ev, const char *s, int off, int len, void *ud) {
 
 int mjson_pretty(const char *s, int n, const char *pad, mjson_print_fn_t fn,
                  void *userdata) {
-  struct prettydata d = {0, 0, 0, pad, fn, userdata};
+  struct prettydata d = {0, 0, 0, pad, strlen(pad), fn, userdata};
   if (mjson(s, n, pretty_cb, &d) < 0) return -1;
   return d.len;
 }
