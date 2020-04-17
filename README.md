@@ -208,6 +208,16 @@ mjson_printf(&mjson_print_dynamic_buf, &s, "{%Q:%d, %Q:%M}", "a", 1, "b", m_prin
 free(s);
 ```
 
+## msjon_pretty()
+
+```c
+int mjson_pretty(const char *s, int n, const char *pad,
+								 mjson_print_fn_t fn, void *userdata);
+```
+
+Pretty-print JSON string `s`, `n` using padding `pad`. If `pad` is `""`,
+then a resulting string is terse one-line. Return length of the printed string.
+
 # JSON-RPC API
 
 For the example, see `unit_test.c :: test_rpc()` function.

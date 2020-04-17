@@ -39,6 +39,14 @@
 #define MJSON_ENABLE_BASE64 1
 #endif
 
+#ifndef MJSON_ENABLE_MERGE
+#define MJSON_ENABLE_MERGE 0
+#endif
+
+#ifndef MJSON_ENABLE_PRETTY
+#define MJSON_ENABLE_PRETTY 0
+#endif
+
 #ifndef MJSON_RPC_IN_BUF_SIZE
 #define MJSON_RPC_IN_BUF_SIZE 256
 #endif
@@ -101,6 +109,14 @@ int mjson_print_long(mjson_print_fn_t, void *, long value, int is_signed);
 int mjson_print_file(const char *ptr, int len, void *userdata);
 int mjson_print_fixed_buf(const char *ptr, int len, void *userdata);
 int mjson_print_dynamic_buf(const char *ptr, int len, void *userdata);
+
+#if MJSON_ENABLE_PRETTY
+int mjson_pretty(const char *, int, const char *, mjson_print_fn_t, void *);
+#endif
+
+#if MJSON_ENABLE_MERGE
+int mjson_merge(const char *, int, const char *, int, mjson_print_fn_t, void *);
+#endif
 
 #endif  // MJSON_ENABLE_PRINT
 
@@ -765,6 +781,84 @@ double ATTR strtod(const char *str, char **end) {
 done:
   if (end) *end = (char *) a;
   return d;
+}
+#endif
+
+#if MJSON_ENABLE_MERGE
+
+static void merge_cb(int ev, const char *s, int off, int len, void *ud) {
+  (void) ev;
+  (void) s;
+  (void) off;
+  (void) len;
+  (void) ud;
+}
+
+int mjson_merge(const char *s, int n, const char *s2, int n2,
+                mjson_print_fn_t fn, void *userdata) {
+  mjson(s, n, merge_cb, NULL);
+  return fn(s, n, userdata) + fn(s2, n2, userdata);
+}
+#endif
+
+#if MJSON_ENABLE_PRETTY
+struct prettydata {
+  int level;
+  int len;
+  int prev;
+  const char *pad;
+  mjson_print_fn_t fn;
+  void *userdata;
+};
+
+static void pretty_cb(int ev, const char *s, int off, int len, void *ud) {
+  struct prettydata *d = (struct prettydata *) ud;
+  int i;
+  switch (ev) {
+    case '{':
+    case '[':
+      d->level++;
+      d->len += d->fn(s + off, len, d->userdata);
+      break;
+    case '}':
+    case ']':
+      d->level--;
+      if (d->prev != '[' && d->prev != '{') {
+        d->len += d->fn("\n", 1, d->userdata);
+        for (i = 0; i < d->level; i++) d->len += d->fn("  ", 2, d->userdata);
+      }
+      d->len += d->fn(s + off, len, d->userdata);
+      break;
+    case ',':
+      d->len += d->fn(",\n", 2, d->userdata);
+      for (i = 0; i < d->level; i++) d->len += d->fn("  ", 2, d->userdata);
+      break;
+    case ':':
+      d->len += d->fn(": ", 2, d->userdata);
+      break;
+    case MJSON_TOK_KEY:
+      if (d->prev == '{') {
+        d->len += d->fn("\n", 1, d->userdata);
+        for (i = 0; i < d->level; i++) d->len += d->fn("  ", 2, d->userdata);
+      }
+      d->len += d->fn(s + off, len, d->userdata);
+      break;
+    default:
+      if (d->prev == '[') {
+        d->len += d->fn("\n", 1, d->userdata);
+        for (i = 0; i < d->level; i++) d->len += d->fn("  ", 2, d->userdata);
+      }
+      d->len += d->fn(s + off, len, d->userdata);
+      break;
+  }
+  d->prev = ev;
+}
+
+int mjson_pretty(const char *s, int n, const char *pad, mjson_print_fn_t fn,
+                 void *userdata) {
+  struct prettydata d = {0, 0, 0, pad, fn, userdata};
+  if (mjson(s, n, pretty_cb, &d) < 0) return -1;
+  return d.len;
 }
 #endif
 

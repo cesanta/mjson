@@ -1,6 +1,8 @@
 #include <assert.h>
 #include <stdio.h>
 
+#define MJSON_ENABLE_PRETTY 1
+#define MJSON_ENABLE_MERGE 1
 #include "mjson.h"
 
 static void test_cb(void) {
@@ -490,6 +492,58 @@ static void test_rpc(void) {
   }
 }
 
+static void test_merge(void) {
+  char buf[512];
+  struct mjson_fixedbuf fb = {buf, sizeof(buf), 0};
+  assert(mjson_merge("", 0, "0", 0, mjson_print_fixed_buf, &fb) == 0);
+}
+
+static void test_pretty(void) {
+  char buf[512];
+  {
+    const char *s = "{   }";
+    const char *expected = "{}";
+    struct mjson_fixedbuf fb = {buf, sizeof(buf), 0};
+    assert(mjson_pretty(s, strlen(s), "  ", mjson_print_fixed_buf, &fb) > 0);
+    assert(fb.len == (int) strlen(expected));
+    assert(strncmp(fb.ptr, expected, fb.len) == 0);
+  }
+  {
+    const char *s = "[   ]";
+    const char *expected = "[]";
+    struct mjson_fixedbuf fb = {buf, sizeof(buf), 0};
+    assert(mjson_pretty(s, strlen(s), "  ", mjson_print_fixed_buf, &fb) > 0);
+    assert(fb.len == (int) strlen(expected));
+    assert(strncmp(fb.ptr, expected, fb.len) == 0);
+  }
+  {
+    const char *s = "{ \"a\" :1}";
+    const char *expected = "{\n  \"a\": 1\n}";
+    struct mjson_fixedbuf fb = {buf, sizeof(buf), 0};
+    assert(mjson_pretty(s, strlen(s), "  ", mjson_print_fixed_buf, &fb) > 0);
+    assert(fb.len == (int) strlen(expected));
+    assert(strncmp(fb.ptr, expected, fb.len) == 0);
+  }
+  {
+    const char *s = "{ \"a\" :1  ,\"b\":2}";
+    const char *expected = "{\n  \"a\": 1,\n  \"b\": 2\n}";
+    struct mjson_fixedbuf fb = {buf, sizeof(buf), 0};
+    assert(mjson_pretty(s, strlen(s), "  ", mjson_print_fixed_buf, &fb) > 0);
+    assert(fb.len == (int) strlen(expected));
+    assert(strncmp(fb.ptr, expected, fb.len) == 0);
+  }
+  {
+    const char *s = "{ \"a\" :1  ,\"b\":2, \"c\":[1,2,{\"d\":3}]}";
+    const char *expected =
+        "{\n  \"a\": 1,\n  \"b\": 2,\n  \"c\": [\n"
+        "    1,\n    2,\n    {\n      \"d\": 3\n    }\n  ]\n}";
+    struct mjson_fixedbuf fb = {buf, sizeof(buf), 0};
+    assert(mjson_pretty(s, strlen(s), "  ", mjson_print_fixed_buf, &fb) > 0);
+    assert(fb.len == (int) strlen(expected));
+    assert(strncmp(fb.ptr, expected, fb.len) == 0);
+  }
+}
+
 int main() {
   test_printf();
   test_cb();
@@ -499,5 +553,7 @@ int main() {
   test_get_string();
   test_print();
   test_rpc();
+  test_merge();
+  test_pretty();
   return 0;
 }
