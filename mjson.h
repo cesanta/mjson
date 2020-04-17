@@ -212,6 +212,7 @@ extern struct jsonrpc_ctx jsonrpc_default_context;
 #else
 #define va_copy(x, y) (x) = (y)
 #define snprintf _snprintf
+#define alloca _alloca
 #endif
 
 static int mjson_esc(int c, int esc) {
@@ -859,16 +860,17 @@ done:
 #endif
 
 #if MJSON_ENABLE_MERGE
-#ifdef _WIN32
-#define alloca _alloca
-#endif
 int ATTR mjson_merge(const char *s, int n, const char *s2, int n2,
                      mjson_print_fn_t fn, void *userdata) {
   int koff, klen, voff, vlen, t, t2, k, off = 0, len = 0, comma = 0;
   if (n < 2) return len;
   len += fn("{", 1, userdata);
   while ((off = mjson_next(s, n, off, &koff, &klen, &voff, &vlen, &t)) != 0) {
+#if !defined(_MSC_VER) || _MSC_VER >= 1700
+    char path[klen + 1];
+#else
     char *path = (char *) alloca(klen + 1);
+#endif
     const char *val;
     memcpy(path, "$.", 2);
     memcpy(path + 2, s + koff + 1, klen - 2);
@@ -892,7 +894,11 @@ int ATTR mjson_merge(const char *s, int n, const char *s2, int n2,
   // Add missing keys
   off = 0;
   while ((off = mjson_next(s2, n2, off, &koff, &klen, &voff, &vlen, &t)) != 0) {
+#if !defined(_MSC_VER) || _MSC_VER >= 1700
+    char path[klen + 1];
+#else
     char *path = (char *) alloca(klen + 1);
+#endif
     const char *val;
     memcpy(path, "$.", 2);
     memcpy(path + 2, s2 + koff + 1, klen - 2);
