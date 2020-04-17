@@ -519,7 +519,10 @@ static void test_merge(void) {
       "{\"a\":1}",  // Simple add
       "{\"b\":2}",
       "{\"a\":1,\"b\":2}",
-      "{\"a\":{}}",  // Simple object
+      "{\"a\":{}}",  // Object -> scalar
+      "{\"a\":1}",
+      "{\"a\":1}",
+      "{\"a\":{}}",  // Object -> object
       "{\"a\":{\"b\":1}}",
       "{\"a\":{\"b\":1}}",
       "{\"a\":{\"b\":1}}",  // Simple object
@@ -528,6 +531,9 @@ static void test_merge(void) {
       "{\"a\":{\"b\":1,\"c\":2}}",  // Simple object
       "{\"a\":{\"c\":null}}",
       "{\"a\":{\"b\":1}}",
+      "{\"a\":[1,{\"b\":false}],\"c\":2}",  // Simple object
+      "{\"a\":null,\"b\":[1]}",
+      "{\"c\":2,\"b\":[1]}",
   };
   for (i = 0; i < sizeof(tests) / sizeof(tests[0]); i += 3) {
     struct mjson_fixedbuf fb = {buf, sizeof(buf), 0};
@@ -536,7 +542,6 @@ static void test_merge(void) {
     // printf("%s + %s = %.*s\n", tests[i], tests[i + 1], fb.len, fb.ptr);
     assert(n == (int) strlen(tests[i + 2]));
     assert(strncmp(fb.ptr, tests[i + 2], fb.len) == 0);
-    break;
   }
 }
 

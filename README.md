@@ -248,6 +248,25 @@ NOTE: to enable this function, `#define MJSON_ENABLE_PRETTY 1`.
 Pretty-print JSON string `s`, `n` using padding `pad`. If `pad` is `""`,
 then a resulting string is terse one-line. Return length of the printed string.
 
+
+## msjon_merge()
+
+```c
+int mjson_merge(const char *s, int n, const char *s2, int n2,
+								mjson_print_fn_t fn, void *fndata);
+```
+
+NOTE: to enable this function, `#define MJSON_ENABLE_MERGE 1`.
+
+Merge JSON string `s2`,`n2` into the original string `s`,`n`. Both strings
+are assumed to hold objects. The result is printed using `fn`,`fndata`.
+Return value: number of bytes printed.
+
+In order to delete the key in the original string, set that key to `null`
+in the `s2`,`n2`.
+NOTE: both strings must not contain arrays, as merging arrays is not supported.
+
+
 # JSON-RPC API
 
 For the example, see `unit_test.c :: test_rpc()` function.

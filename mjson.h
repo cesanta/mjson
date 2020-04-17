@@ -859,86 +859,55 @@ done:
 #endif
 
 #if MJSON_ENABLE_MERGE
-
-struct mergedata {
-  char path[128];
-  int pathlen;
-  int n;
-  int len;
-  int prevtok;
-  const char *s2;
-  int n2;
-  mjson_print_fn_t fn;
-  void *userdata;
-
-  int t;
-  const char *tptr;
-  int tlen;
-};
-
-static int ATTR merge_cb(int tok, const char *s, int off, int len, void *ud) {
-  struct mergedata *d = (struct mergedata *) ud;
-  int i;
-  switch (tok) {
-    case '{':
-      d->path[d->pathlen] = '\0';
-      d->t = mjson_find(d->s2, d->n2, d->path, &d->tptr, &d->tlen);
-      d->path[d->pathlen++] = '.';
-      d->len += d->fn(s + off, len, d->userdata);
-      break;
-    case '}':
-      if (d->t != MJSON_TOK_INVALID) {
-      }
-      while (d->pathlen > 0 && d->path[d->pathlen] != '.') d->pathlen--;
-      d->pathlen--;
-      d->len += d->fn(s + off, len, d->userdata);
-      break;
-    case MJSON_TOK_KEY:
-      for (i = 1; i < len - 1; i++) d->path[d->pathlen++] = s[off + i];
-      d->len += d->fn(s + off, len, d->userdata);
-      break;
-    case ',':
-      while (d->pathlen > 0 && d->path[d->pathlen - 1] != '.') d->pathlen--;
-      d->len += d->fn(s + off, len, d->userdata);
-      break;
-    case ':':
-    case '[':
-    case ']':
-      d->len += d->fn(s + off, len, d->userdata);
-      break;
-    default:
-      d->path[d->pathlen] = '\0';
-      if (d->t != MJSON_TOK_INVALID) {
-        const char *p = NULL;
-        int n = 0, t = mjson_find(d->s2, d->n2, d->path, &p, &n);
-        if (t != MJSON_TOK_INVALID &&
-            (tok != MJSON_TOK_OBJECT || t != MJSON_TOK_OBJECT)) {
-          d->len += d->fn(p, n, d->userdata);
-        } else {
-          d->len += d->fn(s + off, len, d->userdata);
-          // d->len += d->fn(",", 1, d->userdata);
-          // d->len += d->fn(d->t,", 1, d->userdata);
-        }
-      } else {
-        d->len += d->fn(s + off, len, d->userdata);
-      }
-      // printf("  %s -> %.*s\n", d->path, len, s + off);
-      break;
-  }
-  d->prevtok = tok;
-  return 0;
-}
-
+#ifdef _WIN32
+#define alloca _alloca
+#endif
 int ATTR mjson_merge(const char *s, int n, const char *s2, int n2,
                      mjson_print_fn_t fn, void *userdata) {
-  struct mergedata md = {"$",  1,  n,  0,        MJSON_TOK_INVALID,
-                         s2,   n2, fn, userdata, MJSON_TOK_INVALID,
-                         NULL, 0};
-  // printf("%.*s\n", n, s);
-  mjson(s, n, merge_cb, &md);
-  return md.len;
+  int koff, klen, voff, vlen, t, t2, k, off = 0, len = 0, comma = 0;
+  if (n < 2) return len;
+  len += fn("{", 1, userdata);
+  while ((off = mjson_next(s, n, off, &koff, &klen, &voff, &vlen, &t)) != 0) {
+    char *path = (char *) alloca(klen + 1);
+    const char *val;
+    memcpy(path, "$.", 2);
+    memcpy(path + 2, s + koff + 1, klen - 2);
+    path[klen] = '\0';
+    if ((t2 = mjson_find(s2, n2, path, &val, &k)) != MJSON_TOK_INVALID) {
+      if (t2 == MJSON_TOK_NULL) continue;  // null deletes the key
+    } else {
+      val = s + voff;  // Key is not found in the update. Copy the old value.
+    }
+    if (comma) len += fn(",", 1, userdata);
+    len += fn(s + koff, klen, userdata);
+    len += fn(":", 1, userdata);
+    if (t == MJSON_TOK_OBJECT && t2 == MJSON_TOK_OBJECT) {
+      len += mjson_merge(s + voff, vlen, val, k, fn, userdata);
+    } else {
+      if (t2 != MJSON_TOK_INVALID) vlen = k;
+      len += fn(val, vlen, userdata);
+    }
+    comma = 1;
+  }
+  // Add missing keys
+  off = 0;
+  while ((off = mjson_next(s2, n2, off, &koff, &klen, &voff, &vlen, &t)) != 0) {
+    char *path = (char *) alloca(klen + 1);
+    const char *val;
+    memcpy(path, "$.", 2);
+    memcpy(path + 2, s2 + koff + 1, klen - 2);
+    path[klen] = '\0';
+    if (mjson_find(s, n, path, &val, &vlen) != MJSON_TOK_INVALID) continue;
+    if (comma) len += fn(",", 1, userdata);
+    len += fn(s2 + koff, klen, userdata);
+    len += fn(":", 1, userdata);
+    len += fn(s2 + voff, vlen, userdata);
+    comma = 1;
+  }
+  len += fn("}", 1, userdata);
+  return len;
 }
-#endif
+#endif  // MJSON_ENABLE_MERGE
 
 #if MJSON_ENABLE_PRETTY
 struct prettydata {
@@ -1009,7 +978,7 @@ int ATTR mjson_pretty(const char *s, int n, const char *pad,
   if (mjson(s, n, pretty_cb, &d) < 0) return -1;
   return d.len;
 }
-#endif
+#endif  // MJSON_ENABLE_PRETTY
 
 #if MJSON_ENABLE_RPC
 struct jsonrpc_ctx jsonrpc_default_context;
