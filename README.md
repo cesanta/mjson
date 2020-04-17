@@ -142,6 +142,34 @@ Parse JSON string `s`, `len`, calling callback `cb` for each token. This
 is a low-level SAX API, intended for fancy stuff like pretty printing, etc.
 
 
+## mjson_next()
+
+```c
+int mjson_next(const char *s, int n, int off, int *koff, int *klen, int *voff,
+               int *vlen, int *vtype);
+```
+
+NOTE: to enable this function, `#define MJSON_ENABLE_NEXT 1`.
+
+Assuming that JSON string `s`, `n` contains JSON object, return the next
+key/value pair starting from offset `off`: key is returned as  `koff`
+(key offset), `klen` (key length), value is returned as `voff` (value offset),
+`vlen` (value length), `vtype` (value type). Pointers could be NULL.
+Return next offset. Initial offset should be 0.
+
+Usage example:
+
+```c
+const char *s = "{\"a\":123,\"b\":[1,2,3,{\"c\":1}],\"d\":null}";
+int koff, klen, voff, vlen, vtype, off;
+
+for (off = 0; (off = mjson_next(s, strlen(s), off, &koff, &klen,
+																&voff, &vlen, &vtype)) != 0; ) {
+	printf("key: %.*s, value: %.*s\n", klen, s + koff, vlen, s + voff);
+}
+```
+
+
 # Emitting API
 
 
@@ -214,6 +242,8 @@ free(s);
 int mjson_pretty(const char *s, int n, const char *pad,
 								 mjson_print_fn_t fn, void *userdata);
 ```
+
+NOTE: to enable this function, `#define MJSON_ENABLE_PRETTY 1`.
 
 Pretty-print JSON string `s`, `n` using padding `pad`. If `pad` is `""`,
 then a resulting string is terse one-line. Return length of the printed string.

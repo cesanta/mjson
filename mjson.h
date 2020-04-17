@@ -94,6 +94,11 @@ int mjson_get_bool(const char *s, int len, const char *path, int *v);
 int mjson_get_string(const char *s, int len, const char *path, char *to, int n);
 int mjson_get_hex(const char *s, int len, const char *path, char *to, int n);
 
+#if MJSON_ENABLE_NEXT
+int mjson_next(const char *s, int n, int off, int *koff, int *klen, int *voff,
+               int *vlen, int *vtype);
+#endif
+
 #if MJSON_ENABLE_BASE64
 int mjson_get_base64(const char *s, int len, const char *path, char *to, int n);
 #endif
@@ -521,9 +526,64 @@ int ATTR mjson_get_base64(const char *s, int len, const char *path, char *to,
 }
 #endif  // MJSON_ENABLE_BASE64
 
-#if 0 && MJSON_ENABLE_NEXT
-int mjson_next(const char *s, int n, int off, int *keyoff, int *keylen,
-               int *valoff, int *valptr) {
+#if MJSON_ENABLE_NEXT
+struct nextdata {
+  int off, len, depth, t, vo;
+  int *koff, *klen, *voff, *vlen, *vtype;
+};
+
+static int ATTR next_cb(int tok, const char *s, int off, int len, void *ud) {
+  struct nextdata *d = (struct nextdata *) ud;
+  // int i;
+  switch (tok) {
+    case '{':
+    case '[':
+      if (d->depth == 1 && d->len > 0) {
+        d->vo = off;
+        if (d->voff) *d->voff = off;
+        d->t = tok == '{' ? MJSON_TOK_OBJECT : MJSON_TOK_ARRAY;
+        if (d->vtype) *d->vtype = d->t;
+      }
+      d->depth++;
+      break;
+    case '}':
+    case ']':
+      d->depth--;
+      if (d->depth == 1 && d->len > 0) {
+        d->len = off + len;                         // then set the value too:
+        if (d->vlen) *d->vlen = d->len - d->vo;     // value length
+        return 1;                                   // Take the shortcut to exit
+      }
+      break;
+    case ',':
+    case ':':
+      break;
+    case MJSON_TOK_KEY:
+      if (d->depth == 1 && d->off < off) {
+        d->len = off + len;  // Next key found
+        if (d->koff) *d->koff = off;
+        if (d->klen) *d->klen = len;
+      }
+      break;
+    default:
+      if (d->depth == 1 && d->len > 0 && d->t == 0) {
+        d->len = off + len;                // then set the value too:
+        if (d->voff) *d->voff = off;       // value offset
+        if (d->vlen) *d->vlen = len;       // value length
+        if (d->vtype) *d->vtype = tok;     // value type
+        return 1;                          // And take the shortcut to exit
+      }
+      break;
+  }
+  (void) s;
+  return 0;
+}
+
+int ATTR mjson_next(const char *s, int n, int off, int *koff, int *klen,
+                    int *voff, int *vlen, int *vtype) {
+  struct nextdata d = {off, 0, 0, 0, 0, koff, klen, voff, vlen, vtype};
+  mjson(s, n, next_cb, &d);
+  return d.len;
 }
 #endif
 

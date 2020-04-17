@@ -577,6 +577,33 @@ static void test_pretty(void) {
   }
 }
 
+static void test_next(void) {
+  int a, b, c, d, t;
+
+  {
+    const char *s = "{}";
+    assert(mjson_next(s, strlen(s), 0, &a, &b, &c, &d, &t) == 0);
+  }
+
+  {
+    const char *s = "{\"a\":1}";
+    assert(mjson_next(s, strlen(s), 0, &a, &b, &c, &d, &t) == 6);
+    assert(a == 1 && b == 3 && c == 5 && d == 1 && t == MJSON_TOK_NUMBER);
+    assert(mjson_next(s, strlen(s), 6, &a, &b, &c, &d, &t) == 0);
+  }
+
+  {
+    const char *s = "{\"a\":123,\"b\":[1,2,3,{\"c\":1}],\"d\":null}";
+    assert(mjson_next(s, strlen(s), 0, &a, &b, &c, &d, &t) == 8);
+    assert(a == 1 && b == 3 && c == 5 && d == 3 && t == MJSON_TOK_NUMBER);
+    assert(mjson_next(s, strlen(s), 8, &a, &b, &c, &d, &t) == 28);
+    assert(a == 9 && b == 3 && c == 13 && d == 15 && t == MJSON_TOK_ARRAY);
+    assert(mjson_next(s, strlen(s), 28, &a, &b, &c, &d, &t) == 37);
+    assert(a == 29 && b == 3 && c == 33 && d == 4 && t == MJSON_TOK_NULL);
+    assert(mjson_next(s, strlen(s), 37, &a, &b, &c, &d, &t) == 0);
+  }
+}
+
 int main() {
   test_printf();
   test_cb();
@@ -588,5 +615,6 @@ int main() {
   test_rpc();
   test_merge();
   test_pretty();
+  test_next();
   return 0;
 }
