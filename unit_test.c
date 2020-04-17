@@ -89,6 +89,12 @@ static void test_find(void) {
   assert(mjson_find(str, 14, "$.a", &p, &n) == '{');
   str = "{\"b\":7}";
   assert(n == 7 && memcmp(p, str, 7) == 0);
+
+  // Test the shortcut: as soon as we find an element, stop the traversal
+  str = "{\"a\":[1,2,garbage here!!";
+  assert(mjson_find(str, strlen(str), "$.a[0]", &p, &n) == MJSON_TOK_NUMBER);
+  assert(mjson_find(str, strlen(str), "$.a[1]", &p, &n) == MJSON_TOK_NUMBER);
+  assert(mjson_find(str, strlen(str), "$.a[2]", &p, &n) == MJSON_TOK_INVALID);
 }
 
 static void test_get_number(void) {
@@ -204,6 +210,14 @@ static void test_get_string(void) {
     assert(mjson_get_hex(s, strlen(s), "$[1]", buf, sizeof(buf)) == 2);
     assert(strcmp(buf, "\xfe\x31") == 0);
     assert(mjson_get_hex(s, strlen(s), "$[2]", buf, sizeof(buf)) < 0);
+  }
+
+  {
+    const char *s = "[1,2]";
+    double dv;
+    assert(mjson_get_number(s, strlen(s), "$[0]", &dv) == 1 && dv == 1);
+    assert(mjson_get_number(s, strlen(s), "$[1]", &dv) == 1 && dv == 2);
+    assert(mjson_get_number(s, strlen(s), "$[3]", &dv) == 0);
   }
 }
 
@@ -494,8 +508,36 @@ static void test_rpc(void) {
 
 static void test_merge(void) {
   char buf[512];
-  struct mjson_fixedbuf fb = {buf, sizeof(buf), 0};
-  assert(mjson_merge("", 0, "0", 0, mjson_print_fixed_buf, &fb) == 0);
+  size_t i;
+  const char *tests[] = {
+      "",  // Empty string
+      "",
+      "",
+      "{\"a\":1}",  // Simple replace
+      "{\"a\":2}",
+      "{\"a\":2}",
+      "{\"a\":1}",  // Simple add
+      "{\"b\":2}",
+      "{\"a\":1,\"b\":2}",
+      "{\"a\":{}}",  // Simple object
+      "{\"a\":{\"b\":1}}",
+      "{\"a\":{\"b\":1}}",
+      "{\"a\":{\"b\":1}}",  // Simple object
+      "{\"a\":{\"c\":2}}",
+      "{\"a\":{\"b\":1,\"c\":2}}",
+      "{\"a\":{\"b\":1,\"c\":2}}",  // Simple object
+      "{\"a\":{\"c\":null}}",
+      "{\"a\":{\"b\":1}}",
+  };
+  for (i = 0; i < sizeof(tests) / sizeof(tests[0]); i += 3) {
+    struct mjson_fixedbuf fb = {buf, sizeof(buf), 0};
+    int n = mjson_merge(tests[i], strlen(tests[i]), tests[i + 1],
+                        strlen(tests[i + 1]), mjson_print_fixed_buf, &fb);
+    // printf("%s + %s = %.*s\n", tests[i], tests[i + 1], fb.len, fb.ptr);
+    assert(n == (int) strlen(tests[i + 2]));
+    assert(strncmp(fb.ptr, tests[i + 2], fb.len) == 0);
+    break;
+  }
 }
 
 static void test_pretty(void) {

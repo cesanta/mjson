@@ -45,7 +45,14 @@
 
 #ifndef MJSON_ENABLE_PRETTY
 #define MJSON_ENABLE_PRETTY 0
+#elif MJSON_ENABLE_PRETTY
+#define MJSON_ENABLE_NEXT 1
 #endif
+
+#ifndef MJSON_ENABLE_NEXT
+#define MJSON_ENABLE_NEXT 0
+#endif
+
 
 #ifndef MJSON_RPC_IN_BUF_SIZE
 #define MJSON_RPC_IN_BUF_SIZE 256
@@ -73,7 +80,7 @@ enum mjson_tok {
 };
 #define MJSON_TOK_IS_VALUE(t) ((t) > 10 && (t) < 20)
 
-typedef void (*mjson_cb_t)(int ev, const char *s, int off, int len, void *ud);
+typedef int (*mjson_cb_t)(int ev, const char *s, int off, int len, void *ud);
 
 #ifndef MJSON_MAX_DEPTH
 #define MJSON_MAX_DEPTH 20
@@ -229,7 +236,7 @@ int ATTR mjson(const char *s, int len, mjson_cb_t cb, void *ud) {
   unsigned char nesting[MJSON_MAX_DEPTH];
   int i, depth = 0;
 #define MJSONCALL(ev) \
-  if (cb) cb(ev, s, start, i - start + 1, ud)
+  if (cb != NULL && cb(ev, s, start, i - start + 1, ud)) return i + 1;
 
 // In the ascii table, the distance between `[` and `]` is 2.
 // Ditto for `{` and `}`. Hence +2 in the code below.
@@ -349,13 +356,13 @@ static int mjson_plen(const char *s) {
   return i;
 }
 
-static void ATTR mjson_get_cb(int tok, const char *s, int off, int len,
-                              void *ud) {
+static int ATTR mjson_get_cb(int tok, const char *s, int off, int len,
+                             void *ud) {
   struct msjon_get_data *data = (struct msjon_get_data *) ud;
   // printf("--> %2x %2d %2d %2d %2d\t'%s'\t'%.*s'\t\t'%.*s'\n", tok, data->d1,
   //        data->d2, data->i1, data->i2, data->path + data->pos, off, s, len,
   //        s + off);
-  if (data->tok != MJSON_TOK_INVALID) return;  // Found
+  if (data->tok != MJSON_TOK_INVALID) return 1;  // Found
 
   if (tok == '{') {
     if (!data->path[data->pos] && data->d1 == data->d2) data->obj = off;
@@ -402,6 +409,7 @@ static void ATTR mjson_get_cb(int tok, const char *s, int off, int len,
       if (data->toklen) *data->toklen = len;
     }
   }
+  return 0;
 }
 
 enum mjson_tok ATTR mjson_find(const char *s, int len, const char *jp,
@@ -512,6 +520,12 @@ int ATTR mjson_get_base64(const char *s, int len, const char *path, char *to,
   return mjson_base64_dec(p + 1, sz - 2, to, n);
 }
 #endif  // MJSON_ENABLE_BASE64
+
+#if 0 && MJSON_ENABLE_NEXT
+int mjson_next(const char *s, int n, int off, int *keyoff, int *keylen,
+               int *valoff, int *valptr) {
+}
+#endif
 
 #if MJSON_ENABLE_PRINT
 int ATTR mjson_print_fixed_buf(const char *ptr, int len, void *fndata) {
@@ -786,18 +800,83 @@ done:
 
 #if MJSON_ENABLE_MERGE
 
-static void merge_cb(int ev, const char *s, int off, int len, void *ud) {
-  (void) ev;
-  (void) s;
-  (void) off;
-  (void) len;
-  (void) ud;
+struct mergedata {
+  char path[128];
+  int pathlen;
+  int n;
+  int len;
+  int prevtok;
+  const char *s2;
+  int n2;
+  mjson_print_fn_t fn;
+  void *userdata;
+
+  int t;
+  const char *tptr;
+  int tlen;
+};
+
+static int ATTR merge_cb(int tok, const char *s, int off, int len, void *ud) {
+  struct mergedata *d = (struct mergedata *) ud;
+  int i;
+  switch (tok) {
+    case '{':
+      d->path[d->pathlen] = '\0';
+      d->t = mjson_find(d->s2, d->n2, d->path, &d->tptr, &d->tlen);
+      d->path[d->pathlen++] = '.';
+      d->len += d->fn(s + off, len, d->userdata);
+      break;
+    case '}':
+      if (d->t != MJSON_TOK_INVALID) {
+      }
+      while (d->pathlen > 0 && d->path[d->pathlen] != '.') d->pathlen--;
+      d->pathlen--;
+      d->len += d->fn(s + off, len, d->userdata);
+      break;
+    case MJSON_TOK_KEY:
+      for (i = 1; i < len - 1; i++) d->path[d->pathlen++] = s[off + i];
+      d->len += d->fn(s + off, len, d->userdata);
+      break;
+    case ',':
+      while (d->pathlen > 0 && d->path[d->pathlen - 1] != '.') d->pathlen--;
+      d->len += d->fn(s + off, len, d->userdata);
+      break;
+    case ':':
+    case '[':
+    case ']':
+      d->len += d->fn(s + off, len, d->userdata);
+      break;
+    default:
+      d->path[d->pathlen] = '\0';
+      if (d->t != MJSON_TOK_INVALID) {
+        const char *p = NULL;
+        int n = 0, t = mjson_find(d->s2, d->n2, d->path, &p, &n);
+        if (t != MJSON_TOK_INVALID &&
+            (tok != MJSON_TOK_OBJECT || t != MJSON_TOK_OBJECT)) {
+          d->len += d->fn(p, n, d->userdata);
+        } else {
+          d->len += d->fn(s + off, len, d->userdata);
+          // d->len += d->fn(",", 1, d->userdata);
+          // d->len += d->fn(d->t,", 1, d->userdata);
+        }
+      } else {
+        d->len += d->fn(s + off, len, d->userdata);
+      }
+      // printf("  %s -> %.*s\n", d->path, len, s + off);
+      break;
+  }
+  d->prevtok = tok;
+  return 0;
 }
 
-int mjson_merge(const char *s, int n, const char *s2, int n2,
-                mjson_print_fn_t fn, void *userdata) {
-  mjson(s, n, merge_cb, NULL);
-  return fn(s, n, userdata) + fn(s2, n2, userdata);
+int ATTR mjson_merge(const char *s, int n, const char *s2, int n2,
+                     mjson_print_fn_t fn, void *userdata) {
+  struct mergedata md = {"$",  1,  n,  0,        MJSON_TOK_INVALID,
+                         s2,   n2, fn, userdata, MJSON_TOK_INVALID,
+                         NULL, 0};
+  // printf("%.*s\n", n, s);
+  mjson(s, n, merge_cb, &md);
+  return md.len;
 }
 #endif
 
@@ -812,7 +891,7 @@ struct prettydata {
   void *userdata;
 };
 
-static void pretty_cb(int ev, const char *s, int off, int len, void *ud) {
+static int ATTR pretty_cb(int ev, const char *s, int off, int len, void *ud) {
   struct prettydata *d = (struct prettydata *) ud;
   int i;
   switch (ev) {
@@ -861,10 +940,11 @@ static void pretty_cb(int ev, const char *s, int off, int len, void *ud) {
       break;
   }
   d->prev = ev;
+  return 0;
 }
 
-int mjson_pretty(const char *s, int n, const char *pad, mjson_print_fn_t fn,
-                 void *userdata) {
+int ATTR mjson_pretty(const char *s, int n, const char *pad,
+                      mjson_print_fn_t fn, void *userdata) {
   struct prettydata d = {0, 0, 0, pad, strlen(pad), fn, userdata};
   if (mjson(s, n, pretty_cb, &d) < 0) return -1;
   return d.len;
