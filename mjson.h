@@ -1121,7 +1121,11 @@ void ATTR jsonrpc_ctx_init(struct jsonrpc_ctx *ctx,
   ctx->response_cb = response_cb;
   ctx->userdata = userdata;
 
+#ifdef MJSON_LOWERCASE
+  jsonrpc_ctx_export(ctx, "rpc.list", rpclist, ctx);
+#else
   jsonrpc_ctx_export(ctx, "RPC.List", rpclist, ctx);
+#endif
 }
 
 void ATTR jsonrpc_ctx_process_byte(struct jsonrpc_ctx *ctx, unsigned char ch,
