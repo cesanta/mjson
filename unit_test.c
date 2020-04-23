@@ -534,6 +534,12 @@ static void test_merge(void) {
       "{\"a\":[1,{\"b\":false}],\"c\":2}",  // Simple object
       "{\"a\":null,\"b\":[1]}",
       "{\"c\":2,\"b\":[1]}",
+      "{\"a\":1}",  // Delete existing key
+      "{\"a\":null}",
+      "{}",
+      "{\"a\":1}",  // Delete non-existing key
+      "{\"b\":null}",
+      "{\"a\":1}",
   };
   for (i = 0; i < sizeof(tests) / sizeof(tests[0]); i += 3) {
     struct mjson_fixedbuf fb = {buf, sizeof(buf), 0};

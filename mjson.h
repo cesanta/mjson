@@ -902,6 +902,7 @@ int ATTR mjson_merge(const char *s, int n, const char *s2, int n2,
     char *path = (char *) alloca(klen + 1);
 #endif
     const char *val;
+    if (t == MJSON_TOK_NULL) continue;
     memcpy(path, "$.", 2);
     memcpy(path + 2, s2 + koff + 1, klen - 2);
     path[klen] = '\0';
