@@ -144,6 +144,8 @@ struct jsonrpc_request {
   int params_len;       // Length of the "params"
   const char *id;       // Points to the "id" in the request frame
   int id_len;           // Length of the "id"
+  const char *method;   // Points to the "method" in the request frame
+  int method_len;       // Length of the "method"
   mjson_print_fn_t fn;  // Printer function
   void *fndata;         // Printer function data
   void *userdata;       // Callback's user data as specified at export time
@@ -1062,11 +1064,10 @@ void ATTR jsonrpc_return_success(struct jsonrpc_request *r,
 void ATTR jsonrpc_ctx_process(struct jsonrpc_ctx *ctx, const char *req,
                               int req_sz, mjson_print_fn_t fn, void *fndata) {
   const char *result = NULL, *error = NULL;
-  char method[50];
-  int method_sz = 0, result_sz = 0, error_sz = 0;
+  int result_sz = 0, error_sz = 0;
   struct jsonrpc_method *m = NULL;
   struct jsonrpc_userdata d;
-  struct jsonrpc_request r = {NULL, 0, NULL, 0, &jsonrpc_printer, NULL, NULL};
+  struct jsonrpc_request r = {0, 0, 0, 0, 0, 0, &jsonrpc_printer, NULL, NULL};
 
   d.fn = fn;
   d.fndata = fndata;
@@ -1081,8 +1082,8 @@ void ATTR jsonrpc_ctx_process(struct jsonrpc_ctx *ctx, const char *req,
   }
 
   // Method must exist and must be a string
-  if ((method_sz = mjson_get_string(req, req_sz, "$.method", method,
-                                    sizeof(method))) <= 0) {
+  if (mjson_find(req, req_sz, "$.method", &r.method, &r.method_len) !=
+      MJSON_TOK_STRING) {
     mjson_printf(fn, fndata, "{\"error\":{\"code\":-32700,\"message\":%.*Q}}\n",
                  req_sz, req);
     ctx->in_len = 0;
@@ -1094,7 +1095,8 @@ void ATTR jsonrpc_ctx_process(struct jsonrpc_ctx *ctx, const char *req,
   mjson_find(req, req_sz, "$.params", &r.params, &r.params_len);
 
   for (m = ctx->methods; m != NULL; m = m->next) {
-    if (mjson_globmatch(m->method, m->method_sz, method, method_sz) > 0) {
+    if (mjson_globmatch(m->method, m->method_sz, r.method + 1,
+                        r.method_len - 2) > 0) {
       if (r.params == NULL) r.params = "";
       r.userdata = m->cbdata;
       m->cb(&r);
