@@ -306,7 +306,7 @@ Parse JSON-RPC frame contained in `frame`, and invoke a registered handler.
                        void *handler_data);
 ```
 
-Export JSON-RPC function. A function gets called by `jsonrpc_ctx_process()`,
+Export JSON-RPC function. A function gets called by `jsonrpc_process()`,
 which parses an incoming frame and calls a registered handler.
 A `handler()` receives `struct jsonrpc_request *`. It could use
 `jsonrpc_return_error()` or `jsonrpc_return_success()` for returning the result.
