@@ -240,7 +240,7 @@ free(s);
 
 ```c
 int mjson_pretty(const char *s, int n, const char *pad,
-								 mjson_print_fn_t fn, void *userdata);
+                 mjson_print_fn_t fn, void *userdata);
 ```
 
 NOTE: to enable this function, `#define MJSON_ENABLE_PRETTY 1`.
@@ -253,7 +253,7 @@ then a resulting string is terse one-line. Return length of the printed string.
 
 ```c
 int mjson_merge(const char *s, int n, const char *s2, int n2,
-								mjson_print_fn_t fn, void *fndata);
+                mjson_print_fn_t fn, void *fndata);
 ```
 
 NOTE: to enable this function, `#define MJSON_ENABLE_MERGE 1`.
@@ -318,7 +318,7 @@ NOTE: a `name` is a glob pattern that follows these rules:
 - any other character matches itself
 
 For example, after `jsonrpc_export("Foo.*", my_func, my_data);`,
-the server will trigger `my_func` on `Foo.Bar`, `Foo.Baz`, etc, requests.
+the server triggers `my_func` on `Foo.Bar`, `Foo.Baz`, etc.
 
 ## struct jsonrpc_request
 
@@ -450,8 +450,8 @@ see an answer frame:
 
 [![](http://i3.ytimg.com/vi/od1rsIrvwrM/hqdefault.jpg)](https://www.youtube.com/watch?v=od1rsIrvwrM)
 
-See https://mongoose-os.com/ccm/ for more information.
+See https://vcon.io for more information.
 
 # Contact
 
-Questions? See https://mdash.net/home/company.html
+Please visit https://vcon.io/contact.html
