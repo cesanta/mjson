@@ -179,12 +179,11 @@ struct jsonrpc_ctx {
 void jsonrpc_ctx_init(struct jsonrpc_ctx *ctx,
                       void (*response_cb)(const char *, int, void *),
                       void *userdata);
-int jsonrpc_call(mjson_print_fn_t fn, void *fndata, const char *fmt, ...);
 void jsonrpc_return_error(struct jsonrpc_request *r, int code,
                           const char *message, const char *data_fmt, ...);
 void jsonrpc_return_success(struct jsonrpc_request *r, const char *result_fmt,
                             ...);
-void jsonrpc_ctx_process(struct jsonrpc_ctx *ctx, char *req, int req_sz,
+void jsonrpc_ctx_process(struct jsonrpc_ctx *ctx, const char *req, int req_sz,
                          mjson_print_fn_t fn, void *fndata);
 void jsonrpc_ctx_process_byte(struct jsonrpc_ctx *ctx, unsigned char ch,
                               mjson_print_fn_t fn, void *fndata);
@@ -593,10 +592,11 @@ int ATTR mjson_next(const char *s, int n, int off, int *koff, int *klen,
 #if MJSON_ENABLE_PRINT
 int ATTR mjson_print_fixed_buf(const char *ptr, int len, void *fndata) {
   struct mjson_fixedbuf *fb = (struct mjson_fixedbuf *) fndata;
-  int i, left = fb->size - fb->len;
+  int i, left = fb->size - 1 - fb->len;
   if (left < len) len = left;
   for (i = 0; i < len; i++) fb->ptr[fb->len + i] = ptr[i];
   fb->len += len;
+  fb->ptr[fb->len] = '\0';
   return len;
 }
 
@@ -996,20 +996,25 @@ struct jsonrpc_userdata {
   void *fndata;
 };
 
+static int mjson_globmatch(const char *s1, int n1, const char *s2, int n2) {
+  int i = 0, j = 0, ni = 0, nj = 0;
+  while (i < n1 || j < n2) {
+    if (i < n1 && j < n2 && (s1[i] == '?' || s2[j] == s1[i])) {
+      i++, j++;
+    } else if (i < n1 && (s1[i] == '*' || s1[i] == '#')) {
+      ni = i, nj = j + 1, i++;
+    } else if (nj > 0 && nj <= n2 && (s1[i - 1] == '#' || s2[j] != '/')) {
+      i = ni, j = nj;
+    } else {
+      return 0;
+    }
+  }
+  return 1;
+}
+
 static int ATTR jsonrpc_printer(const char *buf, int len, void *userdata) {
   struct jsonrpc_userdata *u = (struct jsonrpc_userdata *) userdata;
   return u->fn(buf, len, u->fndata);
-}
-
-int ATTR jsonrpc_call(mjson_print_fn_t fn, void *fndata, const char *fmt, ...) {
-  va_list ap;
-  int len;
-  char ch = '\n';
-  va_start(ap, fmt);
-  len = mjson_vprintf(fn, fndata, fmt, ap);
-  va_end(ap);
-  fn(&ch, 1, fndata);
-  return len;
 }
 
 void ATTR jsonrpc_return_errorv(struct jsonrpc_request *r, int code,
@@ -1054,11 +1059,11 @@ void ATTR jsonrpc_return_success(struct jsonrpc_request *r,
   va_end(ap);
 }
 
-void ATTR jsonrpc_ctx_process(struct jsonrpc_ctx *ctx, char *req, int req_sz,
-                              mjson_print_fn_t fn, void *fndata) {
-  const char *result = NULL;
+void ATTR jsonrpc_ctx_process(struct jsonrpc_ctx *ctx, const char *req,
+                              int req_sz, mjson_print_fn_t fn, void *fndata) {
+  const char *result = NULL, *error = NULL;
   char method[50];
-  int method_sz = 0, result_sz = 0;
+  int method_sz = 0, result_sz = 0, error_sz = 0;
   struct jsonrpc_method *m = NULL;
   struct jsonrpc_userdata d;
   struct jsonrpc_request r = {NULL, 0, NULL, 0, &jsonrpc_printer, NULL, NULL};
@@ -1069,7 +1074,8 @@ void ATTR jsonrpc_ctx_process(struct jsonrpc_ctx *ctx, char *req, int req_sz,
 
   // Is is a response frame?
   mjson_find(req, req_sz, "$.result", &result, &result_sz);
-  if (result != NULL && result_sz > 0) {
+  if (result == NULL) mjson_find(req, req_sz, "$.error", &error, &error_sz);
+  if (result_sz > 0 || error_sz > 0) {
     if (ctx->response_cb != NULL) ctx->response_cb(req, req_sz, ctx->userdata);
     return;
   }
@@ -1077,7 +1083,7 @@ void ATTR jsonrpc_ctx_process(struct jsonrpc_ctx *ctx, char *req, int req_sz,
   // Method must exist and must be a string
   if ((method_sz = mjson_get_string(req, req_sz, "$.method", method,
                                     sizeof(method))) <= 0) {
-    jsonrpc_call(fn, fndata, "{\"error\":{\"code\":-32700,\"message\":%.*Q}}",
+    mjson_printf(fn, fndata, "{\"error\":{\"code\":-32700,\"message\":%.*Q}}\n",
                  req_sz, req);
     ctx->in_len = 0;
     return;
@@ -1088,7 +1094,7 @@ void ATTR jsonrpc_ctx_process(struct jsonrpc_ctx *ctx, char *req, int req_sz,
   mjson_find(req, req_sz, "$.params", &r.params, &r.params_len);
 
   for (m = ctx->methods; m != NULL; m = m->next) {
-    if (m->method_sz == method_sz && !memcmp(m->method, method, method_sz)) {
+    if (mjson_globmatch(m->method, m->method_sz, method, method_sz) > 0) {
       if (r.params == NULL) r.params = "";
       r.userdata = m->cbdata;
       m->cb(&r);

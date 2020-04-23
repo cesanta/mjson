@@ -274,7 +274,7 @@ For the example, see `unit_test.c :: test_rpc()` function.
 ## jsonrpc_init
 
 ```c
-void jsonrpc_init( int (*response_cb)(char *, int, void *),
+void jsonrpc_init(void (*response_cb)(const char *, int, void *),
                   void *privdata);
 ```
 
@@ -297,29 +297,28 @@ jsonrpc_process(const char *frame, int frame_len, jsonrpc_sender_t fn, void *fda
 
 Parse JSON-RPC frame contained in `frame`, and invoke a registered handler.
 
-## jsonrpc_call
-
-```c
-jsonrpc_call(jsonrpc_sender_t fn, void *fdata, const char *fmt, ...)
-```
-
-Send JSON-RPC call frame. The format must create a valid frame.
-If the `id` is specified in the frame, then it'll generate a response frame.
-When a response frame gets received, a 
-
 
 ## jsonrpc_export
 
 ```c
 #define jsonrpc_export(const char *name,
                        void (*handler)(struct jsonrpc_request *),
-                       void *handler_data)
+                       void *handler_data);
 ```
 
 Export JSON-RPC function. A function gets called by `jsonrpc_ctx_process()`,
 which parses an incoming frame and calls a registered handler.
 A `handler()` receives `struct jsonrpc_request *`. It could use
 `jsonrpc_return_error()` or `jsonrpc_return_success()` for returning the result.
+
+NOTE: a `name` is a glob pattern that follows these rules:
+- `*` matches 0 or more characters, excluding `/`
+- `?` matches any character
+- `#` matches 0 or more characters
+- any other character matches itself
+
+For example, after `jsonrpc_export("Foo.*", my_func, my_data);`,
+the server will trigger `my_func` on `Foo.Bar`, `Foo.Baz`, etc, requests.
 
 ## struct jsonrpc_request
 

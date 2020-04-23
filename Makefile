@@ -12,7 +12,7 @@ endif
 test: mjson.h unit_test.c
 	$(CC) unit_test.c -std=c99 $(CFLAGS) $(EXTRA) -o unit_test && $(DEBUGGER) ./unit_test
 	g++ -g -x c++ unit_test.c $(CFLAGS) -o unit_test && ./unit_test
-	$(GCOVCMD)
+	@test "$(GCOVCMD)" == true || $(GCOVCMD)
 
 VC98 = docker run -v $(CURDIR):$(CURDIR) -w $(CURDIR) docker.io/mgos/vc98
 VCFLAGS = /nologo /W4 /O1
