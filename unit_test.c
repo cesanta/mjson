@@ -555,7 +555,6 @@ static void test_merge(void) {
 }
 
 static void test_pretty(void) {
-  char buf[512];
   size_t i;
   const char *tests[] = {
       "{   }",  // Empty object
@@ -574,20 +573,27 @@ static void test_pretty(void) {
       "{\n  \"a\": 1,\n  \"b\": 2,\n  \"c\": [\n"
       "    1,\n    2,\n    {\n      \"d\": 3\n    }\n  ]\n}",
       "{\"a\":1,\"b\":2,\"c\":[1,2,{\"d\":3}]}",
+
+      "{ \"a\" :{\"b\"  :2},\"c\": {}    }",  // Nested object
+      "{\n  \"a\": {\n    \"b\": 2\n  },\n  \"c\": {}\n}",
+      "{\"a\":{\"b\":2},\"c\":{}}",
   };
 
   for (i = 0; i < sizeof(tests) / sizeof(tests[0]); i += 3) {
+    char buf[512];
     struct mjson_fixedbuf fb = {buf, sizeof(buf), 0};
     const char *s = tests[i];
     ASSERT(mjson_pretty(s, strlen(s), "  ", mjson_print_fixed_buf, &fb) > 0);
     ASSERT(fb.len == (int) strlen(tests[i + 1]));
     ASSERT(strncmp(fb.ptr, tests[i + 1], fb.len) == 0);
+    // printf("==> %s\n", buf);
 
     // Terse print
     fb.len = 0;
     ASSERT(mjson_pretty(s, strlen(s), "", mjson_print_fixed_buf, &fb) > 0);
     ASSERT(fb.len == (int) strlen(tests[i + 2]));
     ASSERT(strncmp(fb.ptr, tests[i + 2], fb.len) == 0);
+    // printf("--> %s\n", buf);
   }
 }
 
