@@ -103,6 +103,7 @@ int mjson_next(const char *s, int n, int off, int *koff, int *klen, int *voff,
 
 #if MJSON_ENABLE_BASE64
 int mjson_get_base64(const char *s, int len, const char *path, char *to, int n);
+int mjson_base64_dec(const char *src, int n, char *dst, int dlen);
 #endif
 
 #if MJSON_ENABLE_PRINT
@@ -502,7 +503,7 @@ static int ATTR mjson_base64rev(int c) {
   }
 }
 
-static int ATTR mjson_base64_dec(const char *src, int n, char *dst, int dlen) {
+int ATTR mjson_base64_dec(const char *src, int n, char *dst, int dlen) {
   const char *end = src + n;
   int len = 0;
   while (src + 3 < end && len < dlen) {
