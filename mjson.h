@@ -64,6 +64,10 @@
 #define ATTR
 #endif
 
+#ifndef MJSON_RPC_LIST_NAME
+#define MJSON_RPC_LIST_NAME "rpc.list"
+#endif
+
 enum {
   MJSON_ERROR_INVALID_INPUT = -1,
   MJSON_ERROR_TOO_DEEP = -2,
@@ -370,8 +374,8 @@ static int ATTR mjson_get_cb(int tok, const char *s, int off, int len,
                              void *ud) {
   struct msjon_get_data *data = (struct msjon_get_data *) ud;
   // printf("--> %2x %2d %2d %2d %2d\t'%s'\t'%.*s'\t\t'%.*s'\n", tok, data->d1,
-  //        data->d2, data->i1, data->i2, data->path + data->pos, off, s, len,
-  //        s + off);
+  // data->d2, data->i1, data->i2, data->path + data->pos, off, s, len,
+  // s + off);
   if (data->tok != MJSON_TOK_INVALID) return 1;  // Found
 
   if (tok == '{') {
@@ -404,12 +408,16 @@ static int ATTR mjson_get_cb(int tok, const char *s, int off, int len,
              !memcmp(s + off + 1, &data->path[data->pos + 1], len - 2)) {
     data->d2++;
     data->pos += len - 1;
+  } else if (tok == MJSON_TOK_KEY && data->d1 == data->d2) {
+    return 1;  // Exhausted path, not found
   } else if (tok == '}' || tok == ']') {
     data->d1--;
+    // data->d2--;
     if (!data->path[data->pos] && data->d1 == data->d2 && data->obj != -1) {
       data->tok = tok - 2;
       if (data->tokptr) *data->tokptr = s + data->obj;
       if (data->toklen) *data->toklen = off - data->obj + 1;
+      return 1;
     }
   } else if (MJSON_TOK_IS_VALUE(tok)) {
     // printf("TOK --> %d\n", tok);
@@ -417,6 +425,7 @@ static int ATTR mjson_get_cb(int tok, const char *s, int off, int len,
       data->tok = tok;
       if (data->tokptr) *data->tokptr = s + off;
       if (data->toklen) *data->toklen = len;
+      return 1;
     }
   }
   return 0;
@@ -1130,12 +1139,7 @@ void ATTR jsonrpc_ctx_init(struct jsonrpc_ctx *ctx,
                            void *userdata) {
   ctx->response_cb = response_cb;
   ctx->userdata = userdata;
-
-#ifdef MJSON_LOWERCASE
-  jsonrpc_ctx_export(ctx, "rpc.list", rpclist, ctx);
-#else
-  jsonrpc_ctx_export(ctx, "RPC.List", rpclist, ctx);
-#endif
+  jsonrpc_ctx_export(ctx, MJSON_RPC_LIST_NAME, rpclist, ctx);
 }
 
 void ATTR jsonrpc_ctx_process_byte(struct jsonrpc_ctx *ctx, unsigned char ch,

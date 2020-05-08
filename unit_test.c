@@ -192,6 +192,17 @@ static void test_get_string(void) {
   }
 
   {
+    const char *s = "{\"a\":{\"x\":\"X\"},\"b\":{\"q\":\"Y\"}}";
+    ASSERT(mjson_get_string(s, strlen(s), "$.a.x", buf, sizeof(buf)) == 1);
+    ASSERT(strcmp(buf, "X") == 0);
+    ASSERT(mjson_find(s, strlen(s), "$.a.q", NULL, NULL) == MJSON_TOK_INVALID);
+    ASSERT(mjson_get_string(s, strlen(s), "$.a.q", buf, sizeof(buf)) < 0);
+    // printf("-->[%s]\n", buf);
+    ASSERT(mjson_get_string(s, strlen(s), "$.b.q", buf, sizeof(buf)) == 1);
+    ASSERT(strcmp(buf, "Y") == 0);
+  }
+
+  {
     struct {
       char buf1[3], buf2[3];
     } foo;
@@ -436,8 +447,8 @@ static void test_rpc(void) {
   jsonrpc_init(response_cb, &fb);
 
   // Call RPC.List
-  req = "{\"id\": 1, \"method\": \"RPC.List\"}";
-  res = "{\"id\":1,\"result\":[\"RPC.List\"]}\n";
+  req = "{\"id\": 1, \"method\": \"rpc.list\"}";
+  res = "{\"id\":1,\"result\":[\"rpc.list\"]}\n";
   fb.len = 0;
   jsonrpc_process(req, strlen(req), mjson_print_fixed_buf, &fb);
   ASSERT(strcmp(buf, res) == 0);
