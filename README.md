@@ -154,11 +154,14 @@ int mjson_next(const char *s, int n, int off, int *koff, int *klen, int *voff,
 
 NOTE: to enable this function, `#define MJSON_ENABLE_NEXT 1`.
 
-Assuming that JSON string `s`, `n` contains JSON object, return the next
-key/value pair starting from offset `off`: key is returned as  `koff`
-(key offset), `klen` (key length), value is returned as `voff` (value offset),
+Assuming that JSON string `s`, `n` contains JSON object or JSON array,
+return the next key/value pair starting from offset `off`.
+key is returned as  `koff` (key offset), `klen` (key length), value is returned as `voff` (value offset),
 `vlen` (value length), `vtype` (value type). Pointers could be NULL.
-Return next offset. Initial offset should be 0.
+Return next offset. When iterating over the array, `koff` will hold value
+index inside an array, and `klen` will be `0`. Therefore, if `klen` holds
+`0`, we're iterating over an array, otherwise over an object.
+Note: initial offset should be 0.
 
 Usage example:
 

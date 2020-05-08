@@ -633,6 +633,28 @@ static void test_next(void) {
     ASSERT(a == 29 && b == 3 && c == 33 && d == 4 && t == MJSON_TOK_NULL);
     ASSERT(mjson_next(s, strlen(s), 37, &a, &b, &c, &d, &t) == 0);
   }
+
+  {
+    const char *s = "[]";
+    ASSERT(mjson_next(s, strlen(s), 0, &a, &b, &c, &d, &t) == 0);
+  }
+
+  {
+    const char *s = "[3,null,{},[1,2],{\"x\":[3]},\"hi\"]";
+    ASSERT(mjson_next(s, strlen(s), 0, &a, &b, &c, &d, &t) == 2);
+    ASSERT(a == 0 && b == 0 && c == 1 && d == 1 && t == MJSON_TOK_NUMBER);
+    ASSERT(mjson_next(s, strlen(s), 2, &a, &b, &c, &d, &t) == 7);
+    ASSERT(a == 1 && b == 0 && c == 3 && d == 4 && t == MJSON_TOK_NULL);
+    ASSERT(mjson_next(s, strlen(s), 7, &a, &b, &c, &d, &t) == 10);
+    ASSERT(a == 2 && b == 0 && c == 8 && d == 2 && t == MJSON_TOK_OBJECT);
+    ASSERT(mjson_next(s, strlen(s), 10, &a, &b, &c, &d, &t) == 16);
+    ASSERT(a == 3 && b == 0 && c == 11 && d == 5 && t == MJSON_TOK_ARRAY);
+    ASSERT(mjson_next(s, strlen(s), 16, &a, &b, &c, &d, &t) == 26);
+    ASSERT(a == 4 && b == 0 && c == 17 && d == 9 && t == MJSON_TOK_OBJECT);
+    ASSERT(mjson_next(s, strlen(s), 26, &a, &b, &c, &d, &t) == 31);
+    ASSERT(a == 5 && b == 0 && c == 27 && d == 4 && t == MJSON_TOK_STRING);
+    ASSERT(mjson_next(s, strlen(s), 31, &a, &b, &c, &d, &t) == 0);
+  }
 }
 
 static void test_globmatch(void) {
@@ -655,6 +677,7 @@ static void test_globmatch(void) {
 }
 
 int main() {
+  test_next();
   test_printf();
   test_cb();
   test_find();
@@ -665,7 +688,6 @@ int main() {
   test_rpc();
   test_merge();
   test_pretty();
-  test_next();
   test_globmatch();
   printf("%s. Total tests: %d, failed: %d\n",
          s_num_errors ? "FAILURE" : "SUCCESS", s_num_tests, s_num_errors);
