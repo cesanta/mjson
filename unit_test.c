@@ -394,6 +394,11 @@ static void test_printf(void) {
   }
 
   {
+    int n = mjson_printf(&mjson_print_null, 0, "{%Q:%d}", "a", 1);
+    ASSERT(n == 7);
+  }
+
+  {
     int n = mjson_printf(&mjson_print_file, stdout, "{%Q:%Q}\n", "message",
                          "well done, test passed");
     ASSERT(n == 37);
