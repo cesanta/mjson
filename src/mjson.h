@@ -385,7 +385,7 @@ static int ATTR mjson_get_cb(int tok, const char *s, int off, int len,
   } else if (tok == '[') {
     if (data->d1 == data->d2 && data->path[data->pos] == '[') {
       data->i1 = 0;
-      data->i2 = strtod(&data->path[data->pos + 1], NULL);
+      data->i2 = (int) strtod(&data->path[data->pos + 1], NULL);
       if (data->i1 == data->i2) {
         data->d2++;
         data->pos += 3;

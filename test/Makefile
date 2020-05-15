@@ -1,5 +1,5 @@
 all: test
-CFLAGS ?= -g -W -Wall 
+CFLAGS ?= -g -W -Wall -I../src
 GCOVCMD ?= true
 
 ifeq ($(shell uname -s),Darwin)
@@ -9,15 +9,16 @@ ifeq ($(CC),clang)
 endif
 endif
 
-test: mjson.h unit_test.c
+test: ../src/mjson.h unit_test.c
 	$(CC) unit_test.c -std=c99 $(CFLAGS) $(EXTRA) -o unit_test && $(DEBUGGER) ./unit_test
 	g++ -g -x c++ unit_test.c $(CFLAGS) -o unit_test && ./unit_test
 	@test "$(GCOVCMD)" == true || $(GCOVCMD)
 
-VC98 = docker run -v $(CURDIR):$(CURDIR) -w $(CURDIR) docker.io/mgos/vc98
-VCFLAGS = /nologo /W4 /O1
-vc98: unit_test.c mjson.h
-	$(VC98) wine cl unit_test.c /DINCLUDE_MJSON_C $(TFLAGS) /Fe$@.exe
+PDIR ?= $(realpath $(CURDIR)/..)
+VC98 = docker run -v $(PDIR):$(PDIR) -w $(CURDIR) docker.io/mgos/vc98
+VCFLAGS = /nologo /W3 /O1 /I../src
+vc98: unit_test.c ../src/mjson.h
+	$(VC98) wine cl unit_test.c $(VCFLAGS) $(TFLAGS) /Fe$@.exe
 	$(VC98) wine $@.exe
 
 clean:

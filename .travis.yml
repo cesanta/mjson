@@ -26,7 +26,7 @@ matrix:
         - sudo mv arduino-1.8.9 /usr/local/share/arduino
         - sudo ln -s /usr/local/share/arduino/arduino /usr/local/bin/arduino
       script:
-        - cp -r ArduinoDeviceShadowExample /tmp
-        - cp mjson.h /tmp/ArduinoDeviceShadowExample
+        - cp -r examples/ArduinoDeviceShadowExample /tmp
+        - cp src/mjson.h /tmp/ArduinoDeviceShadowExample
         - arduino --verify --board arduino:avr:uno /tmp/ArduinoDeviceShadowExample/ArduinoDeviceShadowExample.ino
 
