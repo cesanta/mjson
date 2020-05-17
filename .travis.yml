@@ -8,12 +8,12 @@ os:
 compiler:
   - clang
   - gcc
-script: make test
+script: make -C test
 matrix:
   include:
     - os: linux
       compiler: msvc98
-      script: make vc98
+      script: make -C test vc98
       sudo: required
       services:
         - docker
