@@ -142,8 +142,7 @@ int mjson_merge(const char *, int, const char *, int, mjson_print_fn_t, void *);
 
 #if MJSON_ENABLE_RPC
 
-void jsonrpc_init(void (*response_cb)(const char *, int, void *),
-                  void *userdata);
+void jsonrpc_init(mjson_print_fn_t, void *userdata);
 
 struct jsonrpc_request {
   const char *params;   // Points to the "params" in the request frame
@@ -170,7 +169,7 @@ struct jsonrpc_method {
 struct jsonrpc_ctx {
   struct jsonrpc_method *methods;
   void *userdata;
-  void (*response_cb)(const char *buf, int len, void *userdata);
+  mjson_print_fn_t response_cb;
   int in_len;
   char in[MJSON_RPC_IN_BUF_SIZE];
 };
@@ -184,9 +183,7 @@ struct jsonrpc_ctx {
     (ctx)->methods = &m;                                                     \
   } while (0)
 
-void jsonrpc_ctx_init(struct jsonrpc_ctx *ctx,
-                      void (*response_cb)(const char *, int, void *),
-                      void *userdata);
+void jsonrpc_ctx_init(struct jsonrpc_ctx *ctx, mjson_print_fn_t, void *);
 void jsonrpc_return_error(struct jsonrpc_request *r, int code,
                           const char *message, const char *data_fmt, ...);
 void jsonrpc_return_success(struct jsonrpc_request *r, const char *result_fmt,
@@ -1154,8 +1151,7 @@ static void rpclist(struct jsonrpc_request *r) {
 }
 
 void ATTR jsonrpc_ctx_init(struct jsonrpc_ctx *ctx,
-                           void (*response_cb)(const char *, int, void *),
-                           void *userdata) {
+                           mjson_print_fn_t response_cb, void *userdata) {
   ctx->response_cb = response_cb;
   ctx->userdata = userdata;
   jsonrpc_ctx_export(ctx, MJSON_RPC_LIST_NAME, rpclist, ctx);
@@ -1173,8 +1169,7 @@ void ATTR jsonrpc_ctx_process_byte(struct jsonrpc_ctx *ctx, unsigned char ch,
   }
 }
 
-void ATTR jsonrpc_init(void (*response_cb)(const char *, int, void *),
-                       void *userdata) {
+void ATTR jsonrpc_init(mjson_print_fn_t response_cb, void *userdata) {
   jsonrpc_ctx_init(&jsonrpc_default_context, response_cb, userdata);
 }
 #endif

@@ -438,8 +438,8 @@ static void foo3(struct jsonrpc_request *r) {
   jsonrpc_return_success(r, "%.*s", r->params_len, r->params);
 }
 
-static void response_cb(const char *buf, int len, void *privdata) {
-  mjson_printf(mjson_print_fixed_buf, privdata, ">>%.*s<<", len, buf);
+static int response_cb(const char *buf, int len, void *privdata) {
+  return mjson_printf(mjson_print_fixed_buf, privdata, ">>%.*s<<", len, buf);
 }
 
 static void test_rpc(void) {
