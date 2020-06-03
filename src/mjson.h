@@ -145,6 +145,8 @@ int mjson_merge(const char *, int, const char *, int, mjson_print_fn_t, void *);
 void jsonrpc_init(mjson_print_fn_t, void *userdata);
 
 struct jsonrpc_request {
+  const char *frame;    // Points to the whole frame
+  int frame_len;        // Frame length
   const char *params;   // Points to the "params" in the request frame
   int params_len;       // Length of the "params"
   const char *id;       // Points to the "id" in the request frame
@@ -1093,7 +1095,8 @@ void ATTR jsonrpc_ctx_process(struct jsonrpc_ctx *ctx, const char *req,
   int result_sz = 0, error_sz = 0;
   struct jsonrpc_method *m = NULL;
   struct jsonrpc_userdata d;
-  struct jsonrpc_request r = {0, 0, 0, 0, 0, 0, &jsonrpc_printer, NULL, NULL};
+  struct jsonrpc_request r = {req, req_sz,           0,    0,   0, 0, 0,
+                              0,   &jsonrpc_printer, NULL, NULL};
 
   d.fn = fn;
   d.fndata = fndata;
