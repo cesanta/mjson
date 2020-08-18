@@ -1,5 +1,6 @@
 all: test
-CFLAGS ?= -g -W -Wall -I../src
+DEFS = -DMJSON_ENABLE_MERGE=1 -DMJSON_ENABLE_PRETTY=1
+CFLAGS ?= -g -W -Wall -I../src $(DEFS)
 GCOVCMD ?= true
 
 ifeq ($(shell uname -s),Darwin)
@@ -9,16 +10,16 @@ ifeq ($(CC),clang)
 endif
 endif
 
-test: ../src/mjson.h unit_test.c
-	$(CC) unit_test.c -std=c99 $(CFLAGS) $(EXTRA) -o unit_test && $(DEBUGGER) ./unit_test
-	g++ -g -x c++ unit_test.c $(CFLAGS) -o unit_test && ./unit_test
+test: ../src/mjson.h ../src/mjson.c unit_test.c
+	$(CC) ../src/mjson.c unit_test.c -std=c99 $(CFLAGS) $(EXTRA) -o unit_test && $(DEBUGGER) ./unit_test
+	g++ -g -x c++ ../src/mjson.c unit_test.c $(CFLAGS) -o unit_test && ./unit_test
 	@test "$(GCOVCMD)" == true || $(GCOVCMD)
 
 PDIR ?= $(realpath $(CURDIR)/..)
 VC98 = docker run -v $(PDIR):$(PDIR) -w $(CURDIR) docker.io/mgos/vc98
-VCFLAGS = /nologo /W3 /O1 /I../src
-vc98: unit_test.c ../src/mjson.h
-	$(VC98) wine cl unit_test.c $(VCFLAGS) $(TFLAGS) /Fe$@.exe
+VCFLAGS = /nologo /W3 /O1 /I../src $(DEFS) $(TFLAGS)
+vc98: unit_test.c ../src/mjson.h ../src/mjson.c
+	$(VC98) wine cl ../src/mjson.c unit_test.c $(VCFLAGS) /Fe$@.exe
 	$(VC98) wine $@.exe
 
 clean:

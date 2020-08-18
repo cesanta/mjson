@@ -1,8 +1,6 @@
-#include <stdio.h>
-#include <stdlib.h>
+// Copyright (c) 2018-2020 Cesanta Software Limited
+// All rights reserved
 
-#define MJSON_ENABLE_PRETTY 1
-#define MJSON_ENABLE_MERGE 1
 #include "mjson.h"
 
 static int s_num_tests = 0;
