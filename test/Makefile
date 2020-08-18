@@ -22,5 +22,11 @@ vc98: unit_test.c ../src/mjson.h ../src/mjson.c
 	$(VC98) wine cl ../src/mjson.c unit_test.c $(VCFLAGS) /Fe$@.exe
 	$(VC98) wine $@.exe
 
+arduino:
+	rm -rf /tmp/ArduinoDeviceShadowExample
+	cp -r ../examples/ArduinoDeviceShadowExample /tmp/
+	cp ../src/* /tmp/ArduinoDeviceShadowExample
+	/Applications/Arduino.app/Contents/MacOS/Arduino --verify /tmp/ArduinoDeviceShadowExample/ArduinoDeviceShadowExample.ino
+
 clean:
 	rm -rf unit_test *.exe *.obj *.dSYM

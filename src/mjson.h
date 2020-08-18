@@ -68,6 +68,10 @@
 #define MJSON_RPC_LIST_NAME "rpc.list"
 #endif
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 enum {
   MJSON_ERROR_INVALID_INPUT = -1,
   MJSON_ERROR_TOO_DEEP = -2,
@@ -213,4 +217,7 @@ extern struct jsonrpc_ctx jsonrpc_default_context;
 #define JSONRPC_ERROR_INTERNAL -32603   /* Internal JSON-RPC error */
 
 #endif  // MJSON_ENABLE_RPC
+#ifdef __cplusplus
+}
+#endif
 #endif  // MJSON_H
