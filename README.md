@@ -6,7 +6,8 @@
 
 # Features
 
-- Small, ~1k lines of code single header with no dependencies
+- Small, ~1k lines of code, embedded-friendly
+- No dependencies
 - State machine parser, no allocations, no recursion
 - High level API - fetch from JSON directly into C/C++ by
     [jsonpath](https://github.com/json-path/JsonPath)
