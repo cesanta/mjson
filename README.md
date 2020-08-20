@@ -153,7 +153,7 @@ int mjson_next(const char *s, int n, int off, int *koff, int *klen, int *voff,
                int *vlen, int *vtype);
 ```
 
-NOTE: to enable this function, `#define MJSON_ENABLE_NEXT 1`.
+NOTE: to enable this function, use `-D MJSON_ENABLE_NEXT=1`.
 
 Assuming that JSON string `s`, `n` contains JSON object or JSON array,
 return the next key/value pair starting from offset `off`.
@@ -250,7 +250,7 @@ int mjson_pretty(const char *s, int n, const char *pad,
                  mjson_print_fn_t fn, void *userdata);
 ```
 
-NOTE: to enable this function, `#define MJSON_ENABLE_PRETTY 1`.
+NOTE: to enable this function, use `-D MJSON_ENABLE_PRETTY=1`.
 
 Pretty-print JSON string `s`, `n` using padding `pad`. If `pad` is `""`,
 then a resulting string is terse one-line. Return length of the printed string.
@@ -263,7 +263,7 @@ int mjson_merge(const char *s, int n, const char *s2, int n2,
                 mjson_print_fn_t fn, void *fndata);
 ```
 
-NOTE: to enable this function, `#define MJSON_ENABLE_MERGE 1`.
+NOTE: to enable this function, use `-D MJSON_ENABLE_MERGE=1`.
 
 Merge JSON string `s2`,`n2` into the original string `s`,`n`. Both strings
 are assumed to hold objects. The result is printed using `fn`,`fndata`.
