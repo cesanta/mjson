@@ -205,7 +205,7 @@ If you want to print to something else, for example to a network socket,
 define your own printing function. If you want to see usage examples
 for the built-in printing functions, see `unit_test.c` file.
 
-## msjon_printf()
+## mjson_printf()
 
 ```c
 int mjson_vprintf(mjson_print_fn_t, void *, const char *fmt, va_list ap);
@@ -243,7 +243,7 @@ mjson_printf(&mjson_print_dynamic_buf, &s, "{%Q:%d, %Q:%M}", "a", 1, "b", m_prin
 free(s);
 ```
 
-## msjon_pretty()
+## mjson_pretty()
 
 ```c
 int mjson_pretty(const char *s, int n, const char *pad,
@@ -256,7 +256,7 @@ Pretty-print JSON string `s`, `n` using padding `pad`. If `pad` is `""`,
 then a resulting string is terse one-line. Return length of the printed string.
 
 
-## msjon_merge()
+## mjson_merge()
 
 ```c
 int mjson_merge(const char *s, int n, const char *s2, int n2,
