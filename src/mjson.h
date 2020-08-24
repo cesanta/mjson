@@ -60,10 +60,6 @@
 #define MJSON_RPC_IN_BUF_SIZE 256
 #endif
 
-#ifndef ATTR
-#define ATTR
-#endif
-
 #ifndef MJSON_RPC_LIST_NAME
 #define MJSON_RPC_LIST_NAME "rpc.list"
 #endif
