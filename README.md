@@ -15,6 +15,93 @@
 - Flexible JSON generation API - print to buffer, file, socket, etc
 - JSON-RPC client/server. Connects any microcontroller online via https://vcon.io
 
+## Parsing example
+
+```c
+const char *s = "{\"a\":1,\"b\":[2,false]}";  // {"a":1,"b":[2,false]}
+
+// Extract value of `a` into a variable `val` and print its value
+double val;
+if (mjson_get_number(s, strlen(s), "$.a", &val) printf("a: %g\n", val);
+
+// Extract sub-object `b` and print it:
+const char *sub;
+int len;
+if (mjson_find(s, strlen(s), "$.b", &sub, &len) printf("%.*s\n", len, sub);
+
+// Extract `false`:
+int boolval;
+if (mjson_get_bool(s, strlen(s), "$.b[1]", &boolval) printf("%d\n", boolval);
+```
+
+## Printing example
+
+Print into a dynamically-allocated string:
+```c
+char *result = NULL;      // It's important to initialise it to NULL
+mjson_printf(mjson_print_dynamic_buffer, &result, "{%Q:%d}", "a", (int) 123);
+printf("%s\n", result);   // {"a":123}
+free(result);             // Caller must deallocate result
+```
+
+Print into some custom target, for example, a network socket:
+```c
+// A custom "printer" function
+static int myprint(const char *buf, int len, void *userdata) {
+  int fd = * (int *) userdata;
+  return send(fd, buf, len, 0);
+}
+
+// Print into file descriptor `fd` a string `{"data":"aGkh"}`
+mjson_printf(myprint, &fd, "{%Q:%V}", "data", 3, "hi!");
+```
+
+## JSON-RPC example
+
+In the following example, we initialize JSON-RPC context, and call
+a couple of JSON-RPC methods: a built-in `rpc.list` method which lists
+all registered methods, and our own `foo` method.
+
+The `sender()` implementation just prints the reply to the standard output,
+but in real life it should send a reply to the real remote peer - UART, socket,
+or whatever else.
+
+```c
+#include "mjson.h"
+
+// A custom RPC handler. Many handlers can be registered.
+static void foo(struct jsonrpc_request *r) {
+  double x = mjson_get_number(r->params, r->params_len, "$[1]", 0);
+  jsonrpc_return_success(r, "{%Q:%g,%Q:%Q}", "x", x, "ud", r->userdata);
+}
+
+// Sender function receives a reply frame and must forward it to the peer.
+static int sender(char *frame, int frame_len, void *privdata) {
+  printf("%.*s\n", frame_len, frame); // Print the JSON-RPC reply to stdout
+  return frame_len;
+}
+
+int main(void) {
+  jsonrpc_init(NULL, NULL);
+
+  // Call rpc.list
+  char request1[] = "{\"id\": 1, \"method\": \"rpc.list\"}";
+  jsonrpc_process(request1, strlen(request1), sender, NULL);
+
+  // Call non-existent method
+  char request2[] = "{\"id\": 1, \"method\": \"foo\"}";
+  jsonrpc_process(request2, strlen(request2), sender, NULL);
+
+  // Register our own function
+  char request3[] = "{\"id\": 2, \"method\": \"foo\",\"params\":[0,1.23]}";
+  jsonrpc_export("foo", foo, (void *) "hi");
+  jsonrpc_process(request3, strlen(request3), sender, NULL);
+
+  return 0;
+}
+```
+
+
 # Build options
 
 - `-D MJSON_ENABLE_PRINT=0` disable emitting functionality, default: enabled
@@ -26,6 +113,7 @@
 - `-D MJSON_ENABLE_PRETTY=1` enable `mjson_pretty()`, default: disabled
 - `-D MJSON_ENABLE_MERGE=1` enable `mjson_merge()`, default: disabled
 - `-D MJSON_ENABLE_NEXT=1` enable `mjson_next()`, default: disabled
+
 
 # Parsing API
 
@@ -372,51 +460,6 @@ about the error, for example a faulty request.
 NOTE: if the request frame ID
 is not specified, this function does nothing.
 
-
-## JSON-RPC example
-
-In the following example, we initialize JSON-RPC context, and call
-a couple of JSON-RPC methods: a built-in `rpc.list` method which lists
-all registered methods, and our own `foo` method.
-
-The `sender()` implementation just prints the reply to the standard output,
-but in real life it should send a reply to the real remote peer - UART, socket,
-or whatever else.
-
-```c
-#include "mjson.h"
-
-// A custom RPC handler. Many handlers can be registered.
-static void foo(struct jsonrpc_request *r) {
-  double x = mjson_get_number(r->params, r->params_len, "$[1]", 0);
-  jsonrpc_return_success(r, "{%Q:%g,%Q:%Q}", "x", x, "ud", r->userdata);
-}
-
-// Sender function receives a reply frame and must forward it to the peer.
-static int sender(char *frame, int frame_len, void *privdata) {
-  printf("%.*s\n", frame_len, frame); // Print the JSON-RPC reply to stdout
-  return frame_len;
-}
-
-int main(void) {
-  jsonrpc_init(NULL, NULL);
-
-  // Call rpc.list
-  char request1[] = "{\"id\": 1, \"method\": \"rpc.list\"}";
-  jsonrpc_process(request1, strlen(request1), sender, NULL);
-
-  // Call non-existent method
-  char request2[] = "{\"id\": 1, \"method\": \"foo\"}";
-  jsonrpc_process(request2, strlen(request2), sender, NULL);
-
-  // Register our own function
-  char request3[] = "{\"id\": 2, \"method\": \"foo\",\"params\":[0,1.23]}";
-  jsonrpc_export("foo", foo, (void *) "hi");
-  jsonrpc_process(request3, strlen(request3), sender, NULL);
-
-  return 0;
-}
-```
 
 ## JSON-RPC Arduino example
 
