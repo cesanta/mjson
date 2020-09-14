@@ -240,6 +240,13 @@ static void test_get_string(void) {
     ASSERT(mjson_get_number(s, strlen(s), "$[1]", &dv) == 1 && dv == 2);
     ASSERT(mjson_get_number(s, strlen(s), "$[3]", &dv) == 0);
   }
+
+  {
+    const char *s = "[1,2,\"hello \\u0026\\u003c\\u003e\\\"\"]";
+    const char *expected = "hello &<>\"";
+    ASSERT(mjson_get_string(s, strlen(s), "$[2]", buf, sizeof(buf)) > 0);
+    ASSERT(strcmp(buf, expected) == 0);
+  }
 }
 
 static void test_print(void) {

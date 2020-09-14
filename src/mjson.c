@@ -36,10 +36,14 @@ static int mjson_esc(int c, int esc) {
   return 0;
 }
 
+static int mjson_escape(int c) {
+  return mjson_esc(c, 1);
+}
+
 static int mjson_pass_string(const char *s, int len) {
   int i;
   for (i = 0; i < len; i++) {
-    if (s[i] == '\\' && i + 1 < len && mjson_esc(s[i + 1], 1)) {
+    if (s[i] == '\\' && i + 1 < len && mjson_escape(s[i + 1])) {
       i++;
     } else if (s[i] == '\0') {
       return MJSON_ERROR_INVALID_INPUT;
@@ -260,10 +264,28 @@ int mjson_get_bool(const char *s, int len, const char *path, int *v) {
   return tok == MJSON_TOK_TRUE || tok == MJSON_TOK_FALSE ? 1 : 0;
 }
 
+static unsigned char mjson_unhex_nimble(const char *s) {
+  unsigned char i, v = 0;
+  for (i = 0; i < 2; i++) {
+    int c = s[i];
+    if (i > 0) v <<= 4;
+    v |= (c >= '0' && c <= '9') ? c - '0'
+                                : (c >= 'A' && c <= 'F') ? c - '7' : c - 'W';
+  }
+  return v;
+}
+
 static int mjson_unescape(const char *s, int len, char *to, int n) {
   int i, j;
   for (i = 0, j = 0; i < len && j < n; i++, j++) {
-    if (s[i] == '\\' && i + 1 < len) {
+    if (s[i] == '\\' && i + 5 < len && s[i + 1] == 'u') {
+      //  \uXXXX escape. We could process a simple one-byte chars
+      // \u00xx from the ASCII range. More complex chars would require
+      // dragging in a UTF8 library, which is too much for us
+      if (s[i + 2] != '0' || s[i + 3] != '0') return -1;  // Too much, give up
+      to[j] = mjson_unhex_nimble(s + i + 4);
+      i += 5;
+    } else if (s[i] == '\\' && i + 1 < len) {
       int c = mjson_esc(s[i + 1], 0);
       if (c == 0) return -1;
       to[j] = c;
@@ -290,10 +312,7 @@ int mjson_get_hex(const char *s, int len, const char *x, char *to, int n) {
   int i, j, sz;
   if (mjson_find(s, len, x, &p, &sz) != MJSON_TOK_STRING) return -1;
   for (i = j = 0; i < sz - 3 && j < n; i += 2, j++) {
-#define HEXTOI(x) (x >= '0' && x <= '9' ? x - '0' : x - 'W')
-    unsigned char a = *(const unsigned char *) (p + i + 1);
-    unsigned char b = *(const unsigned char *) (p + i + 2);
-    ((unsigned char *) to)[j] = (HEXTOI(a) << 4) | HEXTOI(b);
+    ((unsigned char *) to)[j] = mjson_unhex_nimble(p + i + 1);
   }
   if (j < n) to[j] = '\0';
   return j;
@@ -481,7 +500,7 @@ int mjson_print_dbl(mjson_print_fn_t fn, void *fndata, double d,
 int mjson_print_str(mjson_print_fn_t fn, void *fndata, const char *s, int len) {
   int i, n = fn("\"", 1, fndata);
   for (i = 0; i < len; i++) {
-    char c = mjson_esc(s[i], 1);
+    char c = mjson_escape(s[i]);
     if (c) {
       n += fn("\\", 1, fndata);
       n += fn(&c, 1, fndata);
