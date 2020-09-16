@@ -71,7 +71,8 @@ or whatever else.
 
 // A custom RPC handler. Many handlers can be registered.
 static void foo(struct jsonrpc_request *r) {
-  double x = mjson_get_number(r->params, r->params_len, "$[1]", 0);
+  double x;
+  mjson_get_number(r->params, r->params_len, "$[1]", &x);
   jsonrpc_return_success(r, "{%Q:%g,%Q:%Q}", "x", x, "ud", r->userdata);
 }
 
