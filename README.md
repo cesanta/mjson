@@ -22,16 +22,16 @@ const char *s = "{\"a\":1,\"b\":[2,false]}";  // {"a":1,"b":[2,false]}
 
 // Extract value of `a` into a variable `val` and print its value
 double val;
-if (mjson_get_number(s, strlen(s), "$.a", &val) printf("a: %g\n", val);
+if (mjson_get_number(s, strlen(s), "$.a", &val)) printf("a: %g\n", val);
 
 // Extract sub-object `b` and print it:
 const char *sub;
 int len;
-if (mjson_find(s, strlen(s), "$.b", &sub, &len) printf("%.*s\n", len, sub);
+if (mjson_find(s, strlen(s), "$.b", &sub, &len)) printf("%.*s\n", len, sub);
 
 // Extract `false`:
 int boolval;
-if (mjson_get_bool(s, strlen(s), "$.b[1]", &boolval) printf("%d\n", boolval);
+if (mjson_get_bool(s, strlen(s), "$.b[1]", &boolval)) printf("%d\n", boolval);
 ```
 
 ## Printing example
