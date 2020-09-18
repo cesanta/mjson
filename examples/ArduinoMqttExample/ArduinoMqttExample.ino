@@ -18,7 +18,7 @@ static void mqtt_cb(struct jsonrpc_request *r) {
 // Host controller can use it to do run-time initialisation of Cloud Connector.
 // In our case, we subscribe to the "ccm/led" MQTT topic.
 static void sys_init_cb(struct jsonrpc_request *r) {
-  jsonrpc_call(wfn, NULL, "{%Q: %Q, %Q: {%Q: %Q}}", 
+  mjson_printf(wfn, NULL, "{%Q: %Q, %Q: {%Q: %Q}}", 
                "method", "MQTT.Sub", "params", "topic", "ccm/led");
 }
 
@@ -42,7 +42,7 @@ void loop() {
   now = millis();
   if (old > now || old + 5000 < now) {
     old = now;
-    jsonrpc_call(wfn, NULL, "{%Q: %Q, %Q: {%Q: %Q, %Q: %lu}}", 
+    mjson_printf(wfn, NULL, "{%Q: %Q, %Q: {%Q: %Q, %Q: %lu}}", 
                  "method", "MQTT.Pub", "params", "topic", "ccm/data",
                  "message", now);
   }
