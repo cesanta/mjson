@@ -105,6 +105,18 @@ static void test_find(void) {
   ASSERT(mjson_find(str, strlen(str), "$.a[0]", &p, &n) == MJSON_TOK_NUMBER);
   ASSERT(mjson_find(str, strlen(str), "$.a[1]", &p, &n) == MJSON_TOK_NUMBER);
   ASSERT(mjson_find(str, strlen(str), "$.a[2]", &p, &n) == MJSON_TOK_INVALID);
+
+  // Test array iteration
+  str = "{\"a\":[1,2],\"b\":[3,4]}";
+  ASSERT(mjson_find(str, strlen(str), "$.a[0]", &p, &n) == MJSON_TOK_NUMBER);
+  ASSERT(mjson_find(str, strlen(str), "$.a[1]", &p, &n) == MJSON_TOK_NUMBER);
+  ASSERT(mjson_find(str, strlen(str), "$.a[2]", &p, &n) == MJSON_TOK_INVALID);
+
+  str = "{\"a1\":[{\"x\":1},{\"x\":2}],\"a2\":[{\"x\":3},{\"x\":4}]}";
+  ASSERT(mjson_find(str, strlen(str), "$.a1[0].x", &p, &n) == MJSON_TOK_NUMBER);
+  ASSERT(mjson_find(str, strlen(str), "$.a1[1].x", &p, &n) == MJSON_TOK_NUMBER);
+  ASSERT(mjson_find(str, strlen(str), "$.a1[2].x", &p, &n) ==
+         MJSON_TOK_INVALID);
 }
 
 static void test_get_number(void) {
