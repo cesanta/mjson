@@ -17,10 +17,16 @@ test: ../src/mjson.h ../src/mjson.c unit_test.c
 
 PDIR ?= $(realpath $(CURDIR)/..)
 VC98 = docker run -v $(PDIR):$(PDIR) -w $(CURDIR) docker.io/mgos/vc98
-VCFLAGS = /nologo /W3 /O1 /I../src $(DEFS) $(TFLAGS)
+VCFLAGS = /nologo /W3 /O1 /I../src /MD $(DEFS) $(TFLAGS)
 vc98: unit_test.c ../src/mjson.h ../src/mjson.c
 	$(VC98) wine cl ../src/mjson.c unit_test.c $(VCFLAGS) /Fe$@.exe
 	$(VC98) wine $@.exe
+
+PDIR ?= $(realpath $(CURDIR)/..)
+VC2017 = docker run -v $(PDIR):$(PDIR) -w $(CURDIR) docker.io/mgos/vc2017
+vc2017: unit_test.c ../src/mjson.h ../src/mjson.c
+	$(VC2017) wine64 cl ../src/mjson.c unit_test.c $(VCFLAGS) /Fe$@.exe
+	$(VC2017) wine64 $@.exe
 
 arduino:
 	rm -rf /tmp/ArduinoDeviceShadowExample

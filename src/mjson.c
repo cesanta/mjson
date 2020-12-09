@@ -21,11 +21,12 @@
 
 #include "mjson.h"
 
-#if !defined(_MSC_VER) || _MSC_VER >= 1700
-#else
+#if defined(_MSC_VER)
+#define alloca _alloca
+#if _MSC_VER < 1700
 #define va_copy(x, y) (x) = (y)
 #define snprintf _snprintf
-#define alloca _alloca
+#endif
 #endif
 
 static int mjson_esc(int c, int esc) {
@@ -104,7 +105,7 @@ int mjson(const char *s, int len, mjson_cb_t cb, void *ud) {
         } else if (c == '-' || ((c >= '0' && c <= '9'))) {
           char *end = NULL;
           strtod(&s[i], &end);
-          if (end != NULL) i += end - &s[i] - 1;
+          if (end != NULL) i += (int) (end - &s[i] - 1);
           tok = MJSON_TOK_NUMBER;
         } else if (c == '"') {
           int n = mjson_pass_string(&s[i + 1], len - i - 1);
@@ -449,7 +450,7 @@ int mjson_print_fixed_buf(const char *ptr, int len, void *fndata) {
 
 int mjson_print_dynamic_buf(const char *ptr, int len, void *fndata) {
   char *s, *buf = *(char **) fndata;
-  int curlen = buf == NULL ? 0 : strlen(buf);
+  int curlen = buf == NULL ? 0 : (int) strlen(buf);
   if ((s = (char *) realloc(buf, curlen + len + 1)) == NULL) {
     return 0;
   } else {
@@ -467,7 +468,7 @@ int mjson_print_null(const char *ptr, int len, void *userdata) {
 }
 
 int mjson_print_file(const char *ptr, int len, void *userdata) {
-  return fwrite(ptr, 1, len, (FILE *) userdata);
+  return (int) fwrite(ptr, 1, len, (FILE *) userdata);
 }
 
 int mjson_print_buf(mjson_print_fn_t fn, void *fndata, const char *buf,
@@ -543,7 +544,8 @@ int mjson_vprintf(mjson_print_fn_t fn, void *fndata, const char *fmt,
       }
       if (fc == 'Q') {
         char *buf = va_arg(ap, char *);
-        n += mjson_print_str(fn, fndata, buf ? buf : "", buf ? strlen(buf) : 0);
+        n += mjson_print_str(fn, fndata, buf ? buf : "",
+                             buf ? (int) strlen(buf) : 0);
       } else if (strncmp(&fmt[i], ".*Q", 3) == 0) {
         int len = va_arg(ap, int);
         char *buf = va_arg(ap, char *);
@@ -561,10 +563,10 @@ int mjson_vprintf(mjson_print_fn_t fn, void *fndata, const char *fmt,
         }
       } else if (fc == 'B') {
         const char *s = va_arg(ap, int) ? "true" : "false";
-        n += mjson_print_buf(fn, fndata, s, strlen(s));
+        n += mjson_print_buf(fn, fndata, s, (int) strlen(s));
       } else if (fc == 's') {
         char *buf = va_arg(ap, char *);
-        n += mjson_print_buf(fn, fndata, buf, strlen(buf));
+        n += mjson_print_buf(fn, fndata, buf, (int) strlen(buf));
       } else if (strncmp(&fmt[i], ".*s", 3) == 0) {
         int len = va_arg(ap, int);
         char *buf = va_arg(ap, char *);
@@ -720,7 +722,7 @@ int mjson_merge(const char *s, int n, const char *s2, int n2,
   if (n < 2) return len;
   len += fn("{", 1, userdata);
   while ((off = mjson_next(s, n, off, &koff, &klen, &voff, &vlen, &t)) != 0) {
-#if !defined(_MSC_VER) || _MSC_VER >= 1700
+#if !defined(_MSC_VER)
     char path[klen + 1];
 #else
     char *path = (char *) alloca(klen + 1);
@@ -748,7 +750,7 @@ int mjson_merge(const char *s, int n, const char *s2, int n2,
   // Add missing keys
   off = 0;
   while ((off = mjson_next(s2, n2, off, &koff, &klen, &voff, &vlen, &t)) != 0) {
-#if !defined(_MSC_VER) || _MSC_VER >= 1700
+#if !defined(_MSC_VER)
     char path[klen + 1];
 #else
     char *path = (char *) alloca(klen + 1);
@@ -835,7 +837,7 @@ static int pretty_cb(int ev, const char *s, int off, int len, void *ud) {
 
 int mjson_pretty(const char *s, int n, const char *pad, mjson_print_fn_t fn,
                  void *userdata) {
-  struct prettydata d = {0, 0, 0, pad, strlen(pad), fn, userdata};
+  struct prettydata d = {0, 0, 0, pad, (int) strlen(pad), fn, userdata};
   if (mjson(s, n, pretty_cb, &d) < 0) return -1;
   return d.len;
 }
@@ -966,7 +968,7 @@ static int jsonrpc_print_methods(mjson_print_fn_t fn, void *fndata,
   int len = 0;
   for (m = ctx->methods; m != NULL; m = m->next) {
     if (m != ctx->methods) len += mjson_print_buf(fn, fndata, ",", 1);
-    len += mjson_print_str(fn, fndata, m->method, strlen(m->method));
+    len += mjson_print_str(fn, fndata, m->method, (int) strlen(m->method));
   }
   return len;
 }
