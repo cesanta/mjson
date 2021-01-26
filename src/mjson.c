@@ -845,10 +845,6 @@ int mjson_pretty(const char *s, int n, const char *pad, mjson_print_fn_t fn,
 
 #if MJSON_ENABLE_RPC
 struct jsonrpc_ctx jsonrpc_default_context;
-struct jsonrpc_userdata {
-  mjson_print_fn_t fn;
-  void *fndata;
-};
 
 int mjson_globmatch(const char *s1, int n1, const char *s2, int n2) {
   int i = 0, j = 0, ni = 0, nj = 0;
@@ -866,11 +862,6 @@ int mjson_globmatch(const char *s1, int n1, const char *s2, int n2) {
   return 1;
 }
 
-static int jsonrpc_printer(const char *buf, int len, void *userdata) {
-  struct jsonrpc_userdata *u = (struct jsonrpc_userdata *) userdata;
-  return u->fn(buf, len, u->fndata);
-}
-
 void jsonrpc_return_errorv(struct jsonrpc_request *r, int code,
                            const char *message, const char *data_fmt,
                            va_list ap) {
@@ -879,7 +870,7 @@ void jsonrpc_return_errorv(struct jsonrpc_request *r, int code,
                "{\"id\":%.*s,\"error\":{\"code\":%d,\"message\":%Q", r->id_len,
                r->id, code, message == NULL ? "" : message);
   if (data_fmt != NULL) {
-  	mjson_printf(r->fn, r->fndata, ",\"data\":");
+    mjson_printf(r->fn, r->fndata, ",\"data\":");
     mjson_vprintf(r->fn, r->fndata, data_fmt, ap);
   }
   mjson_printf(r->fn, r->fndata, "}}\n");
@@ -918,13 +909,7 @@ void jsonrpc_ctx_process(struct jsonrpc_ctx *ctx, const char *req, int req_sz,
   const char *result = NULL, *error = NULL;
   int result_sz = 0, error_sz = 0;
   struct jsonrpc_method *m = NULL;
-  struct jsonrpc_userdata d;
-  struct jsonrpc_request r = {req, req_sz,           0,    0,   0, 0, 0,
-                              0,   &jsonrpc_printer, NULL, NULL};
-
-  d.fn = fn;
-  d.fndata = fndata;
-  r.fndata = &d;
+  struct jsonrpc_request r = {req, req_sz, 0, 0, 0, 0, 0, 0, fn, fndata, NULL};
 
   // Is is a response frame?
   mjson_find(req, req_sz, "$.result", &result, &result_sz);
@@ -939,7 +924,6 @@ void jsonrpc_ctx_process(struct jsonrpc_ctx *ctx, const char *req, int req_sz,
       MJSON_TOK_STRING) {
     mjson_printf(fn, fndata, "{\"error\":{\"code\":-32700,\"message\":%.*Q}}\n",
                  req_sz, req);
-    ctx->in_len = 0;
     return;
   }
 
@@ -982,18 +966,6 @@ void jsonrpc_ctx_init(struct jsonrpc_ctx *ctx, mjson_print_fn_t response_cb,
   ctx->response_cb = response_cb;
   ctx->userdata = userdata;
   jsonrpc_ctx_export(ctx, MJSON_RPC_LIST_NAME, rpclist, ctx);
-}
-
-void jsonrpc_ctx_process_byte(struct jsonrpc_ctx *ctx, unsigned char ch,
-                              mjson_print_fn_t fn, void *p) {
-  if (ctx->in_len >= (int) sizeof(ctx->in)) ctx->in_len = 0;  // Overflow
-  if (ch == '\n') {  // If new line, parse frame
-    if (ctx->in_len > 1) jsonrpc_ctx_process(ctx, ctx->in, ctx->in_len, fn, p);
-    ctx->in_len = 0;
-  } else {
-    ctx->in[ctx->in_len] = ch;  // Append to the buffer
-    ctx->in_len++;
-  }
 }
 
 void jsonrpc_init(mjson_print_fn_t response_cb, void *userdata) {

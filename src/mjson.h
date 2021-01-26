@@ -55,11 +55,6 @@
 #define MJSON_ENABLE_NEXT 0
 #endif
 
-
-#ifndef MJSON_RPC_IN_BUF_SIZE
-#define MJSON_RPC_IN_BUF_SIZE 256
-#endif
-
 #ifndef MJSON_RPC_LIST_NAME
 #define MJSON_RPC_LIST_NAME "rpc.list"
 #endif
@@ -174,8 +169,6 @@ struct jsonrpc_ctx {
   struct jsonrpc_method *methods;
   void *userdata;
   mjson_print_fn_t response_cb;
-  int in_len;
-  char in[MJSON_RPC_IN_BUF_SIZE];
 };
 
 // Registers function fn under the given name within the given RPC context
@@ -194,8 +187,6 @@ void jsonrpc_return_success(struct jsonrpc_request *r, const char *result_fmt,
                             ...);
 void jsonrpc_ctx_process(struct jsonrpc_ctx *ctx, const char *req, int req_sz,
                          mjson_print_fn_t fn, void *fndata);
-void jsonrpc_ctx_process_byte(struct jsonrpc_ctx *ctx, unsigned char ch,
-                              mjson_print_fn_t fn, void *fndata);
 
 extern struct jsonrpc_ctx jsonrpc_default_context;
 
@@ -204,9 +195,6 @@ extern struct jsonrpc_ctx jsonrpc_default_context;
 
 #define jsonrpc_process(buf, len, fn, data) \
   jsonrpc_ctx_process(&jsonrpc_default_context, (buf), (len), (fn), (data))
-
-#define jsonrpc_process_byte(x, fn, data) \
-  jsonrpc_ctx_process_byte(&jsonrpc_default_context, (x), (fn), (data))
 
 #define JSONRPC_ERROR_INVALID -32700    /* Invalid JSON was received */
 #define JSONRPC_ERROR_NOT_FOUND -32601  /* The method does not exist */

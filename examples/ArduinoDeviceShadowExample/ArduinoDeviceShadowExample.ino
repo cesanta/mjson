@@ -1,4 +1,4 @@
-#include "mjson.h" // Sketch -> Add File -> Add mjson.h
+#include "mjson.h"  // Sketch -> Add File -> Add mjson.h
 
 static int ledOn = 0;  // Current LED status
 
@@ -17,9 +17,9 @@ static void shadowDeltaHandler(struct jsonrpc_request *r) {
   int ledOn = 0;
   mjson_get_bool(r->params, r->params_len, "$.on", &ledOn);
   digitalWrite(LED_BUILTIN,
-               ledOn);             // Set LED to the "on" value
-  reportState();                   // Let shadow know our new state
-  jsonrpc_return_success(r, NULL); // Report success
+               ledOn);              // Set LED to the "on" value
+  reportState();                    // Let shadow know our new state
+  jsonrpc_return_success(r, NULL);  // Report success
 }
 
 void setup() {
@@ -31,6 +31,18 @@ void setup() {
   reportState();                 // Let shadow know our state
 }
 
+static void process_byte(unsigned char ch) {
+  static char buf[256];  // Buffer that holds incoming frame
+  static size_t len;     // Current frame length
+
+  if (len >= sizeof(buf)) len = 0;  // Handle overflow - just reset
+  buf[len++] = ch;                  // Append to the buffer
+  if (ch == '\n') {                 // On new line, parse frame
+    jsonrpc_process(buf, len, sender, NULL);
+    len = 0;
+  }
+}
+
 void loop() {
-  if (Serial.available() > 0) jsonrpc_process_byte(Serial.read(), sender, NULL);
+  if (Serial.available() > 0) process_byte(Serial.read());
 }

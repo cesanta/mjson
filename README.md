@@ -485,8 +485,20 @@ void setup() {
   Serial.begin(115200);               // Setup serial port
 }
 
+static void handle_serial_input(unsigned char ch) {
+  static char buf[256];  // Buffer that holds incoming frame
+  static size_t len;     // Current frame length
+
+  if (len >= sizeof(buf)) len = 0;  // Handle overflow - just reset
+  buf[len++] = ch;                  // Append to the buffer
+  if (ch == '\n') {                 // On new line, parse frame
+    jsonrpc_process(buf, len, sender, NULL);
+    len = 0;
+  }
+}
+
 void loop() {
-  if (Serial.available() > 0) jsonrpc_process_byte(Serial.read(), sender, NULL);
+  if (Serial.available() > 0) handle_serial_input(Serial.read());
 }
 ```
 
