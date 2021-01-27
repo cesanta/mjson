@@ -23,11 +23,11 @@ static void sys_init_cb(struct jsonrpc_request *r) {
 }
 
 void setup() {
-  Serial.begin(115200);                           // Init serial comms
-  pinMode(LED_BUILTIN, OUTPUT);                   // Configure LED pin
-  jsonrpc_init(NULL, NULL);                       // Init JSON-RPC engine
-  jsonrpc_export("MQTT.Message", mqtt_cb, NULL);  // Set MQTT message callback
-  jsonrpc_export("Sys.Init", sys_init_cb, NULL);  // Set init callback
+  Serial.begin(115200);                     // Init serial comms
+  pinMode(LED_BUILTIN, OUTPUT);             // Configure LED pin
+  jsonrpc_init(NULL, NULL);                 // Init JSON-RPC engine
+  jsonrpc_export("MQTT.Message", mqtt_cb);  // Set MQTT message callback
+  jsonrpc_export("Sys.Init", sys_init_cb);  // Set init callback
   sys_init_cb(NULL);
 }
 
@@ -38,7 +38,7 @@ static void process_byte(unsigned char ch) {
   if (len >= sizeof(buf)) len = 0;  // Handle overflow - just reset
   buf[len++] = ch;                  // Append to the buffer
   if (ch == '\n') {                 // On new line, parse frame
-    jsonrpc_process(buf, len, wfn, NULL);
+    jsonrpc_process(buf, len, wfn, NULL, NULL);
     len = 0;
   }
 }

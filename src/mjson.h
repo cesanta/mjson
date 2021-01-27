@@ -142,6 +142,7 @@ void jsonrpc_init(mjson_print_fn_t, void *userdata);
 int mjson_globmatch(const char *s1, int n1, const char *s2, int n2);
 
 struct jsonrpc_request {
+  struct jsonrpc_ctx *ctx;
   const char *frame;    // Points to the whole frame
   int frame_len;        // Frame length
   const char *params;   // Points to the "params" in the request frame
@@ -159,7 +160,6 @@ struct jsonrpc_method {
   const char *method;
   int method_sz;
   void (*cb)(struct jsonrpc_request *);
-  void *cbdata;
   struct jsonrpc_method *next;
 };
 
@@ -167,17 +167,16 @@ struct jsonrpc_method {
 // exported RPC methods.
 struct jsonrpc_ctx {
   struct jsonrpc_method *methods;
-  void *userdata;
   mjson_print_fn_t response_cb;
+  void *response_cb_data;
 };
 
 // Registers function fn under the given name within the given RPC context
-#define jsonrpc_ctx_export(ctx, name, fn, ud)                                \
-  do {                                                                       \
-    static struct jsonrpc_method m = {(name), sizeof(name) - 1, (fn), 0, 0}; \
-    m.cbdata = (ud);                                                         \
-    m.next = (ctx)->methods;                                                 \
-    (ctx)->methods = &m;                                                     \
+#define jsonrpc_ctx_export(ctx, name, fn)                                 \
+  do {                                                                    \
+    static struct jsonrpc_method m = {(name), sizeof(name) - 1, (fn), 0}; \
+    m.next = (ctx)->methods;                                              \
+    (ctx)->methods = &m;                                                  \
   } while (0)
 
 void jsonrpc_ctx_init(struct jsonrpc_ctx *ctx, mjson_print_fn_t, void *);
@@ -186,15 +185,15 @@ void jsonrpc_return_error(struct jsonrpc_request *r, int code,
 void jsonrpc_return_success(struct jsonrpc_request *r, const char *result_fmt,
                             ...);
 void jsonrpc_ctx_process(struct jsonrpc_ctx *ctx, const char *req, int req_sz,
-                         mjson_print_fn_t fn, void *fndata);
+                         mjson_print_fn_t fn, void *fndata, void *userdata);
 
 extern struct jsonrpc_ctx jsonrpc_default_context;
 
-#define jsonrpc_export(name, fn, ud) \
-  jsonrpc_ctx_export(&jsonrpc_default_context, (name), (fn), (ud))
+#define jsonrpc_export(name, fn) \
+  jsonrpc_ctx_export(&jsonrpc_default_context, (name), (fn))
 
-#define jsonrpc_process(buf, len, fn, data) \
-  jsonrpc_ctx_process(&jsonrpc_default_context, (buf), (len), (fn), (data))
+#define jsonrpc_process(buf, len, fn, fnd, ud) \
+  jsonrpc_ctx_process(&jsonrpc_default_context, (buf), (len), (fn), (fnd), (ud))
 
 #define JSONRPC_ERROR_INVALID -32700    /* Invalid JSON was received */
 #define JSONRPC_ERROR_NOT_FOUND -32601  /* The method does not exist */

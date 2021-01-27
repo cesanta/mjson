@@ -24,7 +24,7 @@ static void shadowDeltaHandler(struct jsonrpc_request *r) {
 
 void setup() {
   jsonrpc_init(NULL, NULL);
-  jsonrpc_export("Shadow.Delta", shadowDeltaHandler, NULL);
+  jsonrpc_export("Shadow.Delta", shadowDeltaHandler);
 
   pinMode(LED_BUILTIN, OUTPUT);  // Configure LED pin
   Serial.begin(115200);          // Init serial comms
@@ -38,7 +38,7 @@ static void process_byte(unsigned char ch) {
   if (len >= sizeof(buf)) len = 0;  // Handle overflow - just reset
   buf[len++] = ch;                  // Append to the buffer
   if (ch == '\n') {                 // On new line, parse frame
-    jsonrpc_process(buf, len, sender, NULL);
+    jsonrpc_process(buf, len, sender, NULL, NULL);
     len = 0;
   }
 }

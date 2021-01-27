@@ -87,16 +87,16 @@ int main(void) {
 
   // Call rpc.list
   char request1[] = "{\"id\": 1, \"method\": \"rpc.list\"}";
-  jsonrpc_process(request1, strlen(request1), sender, NULL);
+  jsonrpc_process(request1, strlen(request1), sender, NULL, NULL);
 
   // Call non-existent method
   char request2[] = "{\"id\": 1, \"method\": \"foo\"}";
-  jsonrpc_process(request2, strlen(request2), sender, NULL);
+  jsonrpc_process(request2, strlen(request2), sender, NULL, NULL);
 
   // Register our own function
   char request3[] = "{\"id\": 2, \"method\": \"foo\",\"params\":[0,1.23]}";
   jsonrpc_export("foo", foo, (void *) "hi");
-  jsonrpc_process(request3, strlen(request3), sender, NULL);
+  jsonrpc_process(request3, strlen(request3), sender, NULL, NULL);
 
   return 0;
 }
@@ -371,7 +371,7 @@ For the example, see `unit_test.c :: test_rpc()` function.
 
 ```c
 void jsonrpc_init(void (*response_cb)(const char *, int, void *),
-                  void *privdata);
+                  void *response_cb_data);
 ```
 
 Initialize JSON-RPC context. The `sender()` function must be provided
@@ -388,18 +388,18 @@ pointer.
 ## jsonrpc_process
 
 ```c
-jsonrpc_process(const char *frame, int frame_len, jsonrpc_sender_t fn, void *fdata);
+jsonrpc_process(const char *frame, int frame_len, jsonrpc_sender_t fn, void *fdata, void *userdata);
 ```
 
 Parse JSON-RPC frame contained in `frame`, and invoke a registered handler.
+The `userdata` pointer gets passed as `r->userdata` to the RPC handler.
 
 
 ## jsonrpc_export
 
 ```c
 #define jsonrpc_export(const char *name,
-                       void (*handler)(struct jsonrpc_request *),
-                       void *handler_data);
+                       void (*handler)(struct jsonrpc_request *));
 ```
 
 Export JSON-RPC function. A function gets called by `jsonrpc_process()`,
@@ -420,13 +420,14 @@ the server triggers `my_func` on `Foo.Bar`, `Foo.Baz`, etc.
 
 ```c
 struct jsonrpc_request {
+  struct jsonrpc_ctx *ctx;
   const char *params;     // Points to the "params" in the request frame
   int params_len;         // Length of the "params"
   const char *id;         // Points to the "id" in the request frame
   int id_len;             // Length of the "id"
   mjson_print_fn_t fn;    // Printer function
   void *fndata;           // Printer function data
-  void *userdata;         // Callback's user data as specified at export time
+  void *userdata;         // userdata pointer passed to jsonrpc_process()
 };
 ```
 
@@ -492,7 +493,7 @@ static void handle_serial_input(unsigned char ch) {
   if (len >= sizeof(buf)) len = 0;  // Handle overflow - just reset
   buf[len++] = ch;                  // Append to the buffer
   if (ch == '\n') {                 // On new line, parse frame
-    jsonrpc_process(buf, len, sender, NULL);
+    jsonrpc_process(buf, len, sender, NULL, NULL);
     len = 0;
   }
 }

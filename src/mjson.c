@@ -904,38 +904,37 @@ void jsonrpc_return_success(struct jsonrpc_request *r, const char *result_fmt,
   va_end(ap);
 }
 
-void jsonrpc_ctx_process(struct jsonrpc_ctx *ctx, const char *req, int req_sz,
-                         mjson_print_fn_t fn, void *fndata) {
+void jsonrpc_ctx_process(struct jsonrpc_ctx *ctx, const char *buf, int len,
+                         mjson_print_fn_t fn, void *fndata, void *ud) {
   const char *result = NULL, *error = NULL;
   int result_sz = 0, error_sz = 0;
   struct jsonrpc_method *m = NULL;
-  struct jsonrpc_request r = {req, req_sz, 0, 0, 0, 0, 0, 0, fn, fndata, NULL};
+  struct jsonrpc_request r = {ctx, buf, len, 0, 0, 0, 0, 0, 0, fn, fndata, ud};
 
   // Is is a response frame?
-  mjson_find(req, req_sz, "$.result", &result, &result_sz);
-  if (result == NULL) mjson_find(req, req_sz, "$.error", &error, &error_sz);
+  mjson_find(buf, len, "$.result", &result, &result_sz);
+  if (result == NULL) mjson_find(buf, len, "$.error", &error, &error_sz);
   if (result_sz > 0 || error_sz > 0) {
-    if (ctx->response_cb != NULL) ctx->response_cb(req, req_sz, ctx->userdata);
+    if (ctx->response_cb) ctx->response_cb(buf, len, ctx->response_cb_data);
     return;
   }
 
   // Method must exist and must be a string
-  if (mjson_find(req, req_sz, "$.method", &r.method, &r.method_len) !=
+  if (mjson_find(buf, len, "$.method", &r.method, &r.method_len) !=
       MJSON_TOK_STRING) {
     mjson_printf(fn, fndata, "{\"error\":{\"code\":-32700,\"message\":%.*Q}}\n",
-                 req_sz, req);
+                 len, buf);
     return;
   }
 
   // id and params are optional
-  mjson_find(req, req_sz, "$.id", &r.id, &r.id_len);
-  mjson_find(req, req_sz, "$.params", &r.params, &r.params_len);
+  mjson_find(buf, len, "$.id", &r.id, &r.id_len);
+  mjson_find(buf, len, "$.params", &r.params, &r.params_len);
 
   for (m = ctx->methods; m != NULL; m = m->next) {
     if (mjson_globmatch(m->method, m->method_sz, r.method + 1,
                         r.method_len - 2) > 0) {
       if (r.params == NULL) r.params = "";
-      r.userdata = m->cbdata;
       m->cb(&r);
       break;
     }
@@ -958,14 +957,14 @@ static int jsonrpc_print_methods(mjson_print_fn_t fn, void *fndata,
 }
 
 static void rpclist(struct jsonrpc_request *r) {
-  jsonrpc_return_success(r, "[%M]", jsonrpc_print_methods, r->userdata);
+  jsonrpc_return_success(r, "[%M]", jsonrpc_print_methods, r->ctx);
 }
 
 void jsonrpc_ctx_init(struct jsonrpc_ctx *ctx, mjson_print_fn_t response_cb,
-                      void *userdata) {
+                      void *response_cb_data) {
   ctx->response_cb = response_cb;
-  ctx->userdata = userdata;
-  jsonrpc_ctx_export(ctx, MJSON_RPC_LIST_NAME, rpclist, ctx);
+  ctx->response_cb_data = response_cb_data;
+  jsonrpc_ctx_export(ctx, MJSON_RPC_LIST_NAME, rpclist);
 }
 
 void jsonrpc_init(mjson_print_fn_t response_cb, void *userdata) {

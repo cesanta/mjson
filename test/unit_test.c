@@ -472,73 +472,77 @@ static void test_rpc(void) {
   req = "{\"id\": 1, \"method\": \"rpc.list\"}";
   res = "{\"id\":1,\"result\":[\"rpc.list\"]}\n";
   fb.len = 0;
-  jsonrpc_process(req, strlen(req), mjson_print_fixed_buf, &fb);
+  jsonrpc_process(req, strlen(req), mjson_print_fixed_buf, &fb, NULL);
   ASSERT(strcmp(buf, res) == 0);
 
   // Call non-existent method
   req = "{\"id\": 1, \"method\": \"foo\"}\n";
-  res = "{\"id\":1,\"error\":{\"code\":-32601,\"message\":\"method not found\"}}\n";
+  res =
+      "{\"id\":1,\"error\":{\"code\":-32601,\"message\":\"method not "
+      "found\"}}\n";
   fb.len = 0;
-  jsonrpc_process(req, strlen(req), mjson_print_fixed_buf, &fb);
+  jsonrpc_process(req, strlen(req), mjson_print_fixed_buf, &fb, NULL);
   ASSERT(strcmp(buf, res) == 0);
 
   // Register our own function
   req = "{\"id\": 2, \"method\": \"foo\",\"params\":[0,1.23]}\n";
   res = "{\"id\":2,\"result\":{\"x\":1.23,\"ud\":\"hi\"}}\n";
   fb.len = 0;
-  jsonrpc_export("foo", foo, (void *) "hi");
-  jsonrpc_process(req, strlen(req), mjson_print_fixed_buf, &fb);
+  jsonrpc_export("foo", foo);
+  jsonrpc_process(req, strlen(req), mjson_print_fixed_buf, &fb, (void *) "hi");
   ASSERT(strcmp(buf, res) == 0);
 
   // Test for bad frame
   req = "boo\n";
   res = "{\"error\":{\"code\":-32700,\"message\":\"boo\\n\"}}\n";
   fb.len = 0;
-  jsonrpc_process(req, strlen(req), mjson_print_fixed_buf, &fb);
+  jsonrpc_process(req, strlen(req), mjson_print_fixed_buf, &fb, NULL);
   ASSERT(strcmp(buf, res) == 0);
 
-	// Test simple error response, without data
+  // Test simple error response, without data
   req = "{\"id\": 3, \"method\": \"foo1\",\"params\":[1,true]}\n";
   res = "{\"id\":3,\"error\":{\"code\":123,\"message\":\"\"}}\n";
-  jsonrpc_export("foo1", foo1, NULL);
+  jsonrpc_export("foo1", foo1);
   fb.len = 0;
-  jsonrpc_process(req, strlen(req), mjson_print_fixed_buf, &fb);
+  jsonrpc_process(req, strlen(req), mjson_print_fixed_buf, &fb, NULL);
   ASSERT(strcmp(buf, res) == 0);
 
-	// Test more complex error response, with data
+  // Test more complex error response, with data
   req = "{\"id\": 4, \"method\": \"foo2\",\"params\":[1,true]}\n";
-  res = "{\"id\":4,\"error\":{\"code\":456,\"message\":\"qwerty\",\"data\":[1,true]}}\n";
-  jsonrpc_export("foo2", foo2, NULL);
+  res =
+      "{\"id\":4,\"error\":{\"code\":456,\"message\":\"qwerty\",\"data\":[1,"
+      "true]}}\n";
+  jsonrpc_export("foo2", foo2);
   fb.len = 0;
-  jsonrpc_process(req, strlen(req), mjson_print_fixed_buf, &fb);
+  jsonrpc_process(req, strlen(req), mjson_print_fixed_buf, &fb, NULL);
   ASSERT(strcmp(buf, res) == 0);
 
   // Test notify - must not generate a response
   req = "{\"method\": \"ping\",\"params\":[1,true]}\n";
   fb.len = 0;
-  jsonrpc_process(req, strlen(req), mjson_print_fixed_buf, &fb);
+  jsonrpc_process(req, strlen(req), mjson_print_fixed_buf, &fb, NULL);
   ASSERT(fb.len == 0);
 
   // Test success response
   req = "{\"id\":123,\"result\":[1,2,3]}";
   res = ">>{\"id\":123,\"result\":[1,2,3]}<<";
   fb.len = 0;
-  jsonrpc_process(req, strlen(req), mjson_print_fixed_buf, &fb);
+  jsonrpc_process(req, strlen(req), mjson_print_fixed_buf, &fb, NULL);
   ASSERT(strcmp(buf, res) == 0);
 
   // Test error response
   req = "{\"id\":566,\"error\":{}}";
   res = ">>{\"id\":566,\"error\":{}}<<";
   fb.len = 0;
-  jsonrpc_process(req, strlen(req), mjson_print_fixed_buf, &fb);
+  jsonrpc_process(req, strlen(req), mjson_print_fixed_buf, &fb, NULL);
   ASSERT(strcmp(buf, res) == 0);
 
   // Test glob pattern in the RPC function name
   req = "{\"id\":777,\"method\":\"Bar.Baz\",\"params\":[true]}";
   res = "{\"id\":777,\"result\":[true]}\n";
-  jsonrpc_export("Bar.*", foo3, NULL);
+  jsonrpc_export("Bar.*", foo3);
   fb.len = 0;
-  jsonrpc_process(req, strlen(req), mjson_print_fixed_buf, &fb);
+  jsonrpc_process(req, strlen(req), mjson_print_fixed_buf, &fb, NULL);
   ASSERT(strcmp(buf, res) == 0);
 }
 
