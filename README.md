@@ -466,7 +466,7 @@ is not specified, this function does nothing.
 ## JSON-RPC Arduino example
 
 ```c
-#include "mjson.h"  // Sketch -> Add file -> add mjson.h
+#include "mjson.h"
 
 // Gets called by the RPC engine to send a reply frame
 static int sender(const char *frame, int frame_len, void *privdata) {
@@ -499,7 +499,11 @@ static void handle_serial_input(unsigned char ch) {
 }
 
 void loop() {
-  if (Serial.available() > 0) handle_serial_input(Serial.read());
+  char buf[800];
+  if (Serial.available() > 0) {
+    int len = Serial.readBytes(buf, sizeof(buf));
+    jsonrpc_process(buf, len, sender, NULL, NULL);
+  }
 }
 ```
 

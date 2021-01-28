@@ -31,18 +31,10 @@ void setup() {
   reportState();                 // Let shadow know our state
 }
 
-static void process_byte(unsigned char ch) {
-  static char buf[256];  // Buffer that holds incoming frame
-  static size_t len;     // Current frame length
-
-  if (len >= sizeof(buf)) len = 0;  // Handle overflow - just reset
-  buf[len++] = ch;                  // Append to the buffer
-  if (ch == '\n') {                 // On new line, parse frame
-    jsonrpc_process(buf, len, sender, NULL, NULL);
-    len = 0;
-  }
-}
-
 void loop() {
-  if (Serial.available() > 0) process_byte(Serial.read());
+  char buf[800];
+  if (Serial.available() > 0) {
+    int len = Serial.readBytes(buf, sizeof(buf));
+    jsonrpc_process(buf, len, sender, NULL, NULL);
+  }
 }
