@@ -59,6 +59,10 @@
 #define MJSON_RPC_LIST_NAME "rpc.list"
 #endif
 
+#ifndef MJSON_DYNBUF_CHUNK
+#define MJSON_DYNBUF_CHUNK 256  // Allocation granularity for print_dynamic_buf
+#endif
+
 #ifdef __cplusplus
 extern "C" {
 #endif

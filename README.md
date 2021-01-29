@@ -110,7 +110,7 @@ int main(void) {
 - `-D MJSON_MAX_DEPTH=30` define max object depth, default: 20
 - `-D MJSON_ENABLE_BASE64=0` disable base64 parsing/printing, default: enabled
 - `-D MJSON_ENABLE_RPC=0` disable RPC functionality, default: enabled
-- `-D MJSON_RPC_IN_BUF_SIZE=4096` sets JSON-RPC input buffer size, default: 256
+- `-D MJSON_DYNBUF_CHUNK=256` sets the allocation granularity of `mjson_print_dynamic_buf`
 - `-D MJSON_ENABLE_PRETTY=1` enable `mjson_pretty()`, default: disabled
 - `-D MJSON_ENABLE_MERGE=1` enable `mjson_merge()`, default: disabled
 - `-D MJSON_ENABLE_NEXT=1` enable `mjson_next()`, default: disabled

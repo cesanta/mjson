@@ -448,10 +448,16 @@ int mjson_print_fixed_buf(const char *ptr, int len, void *fndata) {
   return len;
 }
 
+// This function allocates memory in chunks of size MJSON_DYNBUF_CHUNK
+// to decrease memory fragmentation, when many calls are executed to
+// print e.g. a base64 string or a hex string.
 int mjson_print_dynamic_buf(const char *ptr, int len, void *fndata) {
   char *s, *buf = *(char **) fndata;
-  int curlen = buf == NULL ? 0 : (int) strlen(buf);
-  if ((s = (char *) realloc(buf, curlen + len + 1)) == NULL) {
+  size_t curlen = buf == NULL ? 0 : strlen(buf);
+  size_t new_size = curlen + len + 1 + MJSON_DYNBUF_CHUNK;
+  new_size -= new_size % MJSON_DYNBUF_CHUNK;
+
+  if ((s = (char *) realloc(buf, new_size)) == NULL) {
     return 0;
   } else {
     memcpy(s + curlen, ptr, len);
