@@ -482,9 +482,21 @@ int mjson_print_buf(mjson_print_fn_t fn, void *fnd, const char *buf, int len) {
 }
 
 int mjson_print_long(mjson_print_fn_t fn, void *fnd, long val, int is_signed) {
-  char buf[20];
-  int len = snprintf(buf, sizeof(buf), is_signed ? "%ld" : "%lu", val);
-  return fn(buf, len, fnd);
+  unsigned long v = val, s = 0, n, i;
+  char buf[20], t;
+  if (is_signed && val < 0) {
+    buf[s++] = '-';
+    v = -val;
+  }
+  // This loop prints a number in reverse order. I guess this is because we
+  // write numbers from right to left: least significant digit comes last.
+  // Maybe becase we use Arabic numbers, and Arabs write RTL?
+  for (n = 0; v > 0; v /= 10) buf[s + n++] = "0123456789"[v % 10];
+  // Reverse a string
+  for (i = 0; i < n / 2; i++)
+    t = buf[s + i], buf[s + i] = buf[s + n - i - 1], buf[s + n - i - 1] = t;
+  if (val == 0) buf[n++] = '0';  // Handle special case
+  return fn(buf, s + n, fnd);
 }
 
 int mjson_print_int(mjson_print_fn_t fn, void *fnd, int v, int s) {
