@@ -268,6 +268,7 @@ static void test_print(void) {
   {
     struct mjson_fixedbuf fb = {tmp, sizeof(tmp), 0};
     ASSERT(mjson_print_int(&mjson_print_fixed_buf, &fb, -97, 1) == 3);
+    // printf("-->[%s]\n", tmp);
     ASSERT(memcmp(tmp, "-97", 3) == 0);
     ASSERT(fb.len < fb.size);
   }
