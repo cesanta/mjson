@@ -39,7 +39,7 @@ if (mjson_get_bool(s, strlen(s), "$.b[1]", &boolval)) printf("%d\n", boolval);
 Print into a dynamically-allocated string:
 ```c
 char *result = NULL;      // It's important to initialise it to NULL
-mjson_printf(mjson_print_dynamic_buffer, &result, "{%Q:%d}", "a", (int) 123);
+mjson_printf(mjson_print_dynamic_buf, &result, "{%Q:%d}", "a", (int) 123);
 printf("%s\n", result);   // {"a":123}
 free(result);             // Caller must deallocate result
 ```
