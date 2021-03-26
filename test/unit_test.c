@@ -1,6 +1,10 @@
 // Copyright (c) 2018-2020 Cesanta Software Limited
 // All rights reserved
 
+#include <float.h>  // For DBL_EPSILON
+#include <math.h>
+#include <stdio.h>  // For printf
+
 #include "mjson.h"
 
 static int s_num_tests = 0;
@@ -14,6 +18,10 @@ static int s_num_errors = 0;
       printf("FAIL %s:%d: %s\n", __FILE__, __LINE__, #expr); \
     }                                                        \
   } while (0)
+
+#ifdef _WIN32
+#define snprintf _snprintf
+#endif
 
 static void test_cb(void) {
   const char *str;
@@ -119,6 +127,11 @@ static void test_find(void) {
          MJSON_TOK_INVALID);
 }
 
+// Compare two double numbers
+static int eqdbl(double a, double b) {
+  return (a - b < DBL_EPSILON) && (b - a < DBL_EPSILON);
+}
+
 static void test_get_number(void) {
   const char *str;
   double v;
@@ -126,8 +139,13 @@ static void test_get_number(void) {
   ASSERT(mjson_get_number("234", 3, "$", &v) == 1 && v == 234);
   str = "{\"a\":-7}";
   ASSERT(mjson_get_number(str, 8, "$.a", &v) == 1 && v == -7);
-  str = "{\"a\":1.2e3}";
-  ASSERT(mjson_get_number(str, 11, "$.a", &v) == 1 && v == 1.2e3);
+  ASSERT(mjson_get_number("1.2e3", 8, "$", &v) == 1 && v == 1.2e3);
+  ASSERT(mjson_get_number("-0.00013", 8, "$", &v) == 1 && eqdbl(v, -0.00013));
+  ASSERT(mjson_get_number("-0.123456", 9, "$", &v) == 1 && eqdbl(v, -0.123456));
+  ASSERT(mjson_get_number("99.999999", 9, "$", &v) == 1 && v == 99.999999);
+  ASSERT(mjson_get_number("1.23e+12", 8, "$", &v) == 1 && v == 1.23e+12);
+  ASSERT(mjson_get_number("1.23e-44", 8, "$", &v) == 1 && eqdbl(v, 1.23e-44));
+  // printf("==> [%g]\n", v);
   ASSERT(mjson_get_number("[1.23,-43.47,17]", 16, "$", &v) == 0);
   ASSERT(mjson_get_number("[1.23,-43.47,17]", 16, "$[0]", &v) == 1 &&
          v == 1.23);
@@ -340,16 +358,46 @@ static int f1(mjson_print_fn_t fn, void *fndata, va_list *ap) {
 
 static void test_printf(void) {
   const char *str;
-  {
-    char tmp[20];
-    struct mjson_fixedbuf fb = {tmp, sizeof(tmp), 0};
-    ASSERT(mjson_printf(&mjson_print_fixed_buf, &fb, "%g", 0.123) == 5);
-    ASSERT(memcmp(tmp, "0.123", 5) == 0);
-    ASSERT(fb.len < fb.size);
-  }
+  char tmp[100];
+
+#define DBLWIDTH(a, b) a, b
+#define TESTDOUBLE(fmt_, num_, res_)                                    \
+  do {                                                                  \
+    const char *N = #num_;                                              \
+    struct mjson_fixedbuf fb = {tmp, sizeof(tmp), 0};                   \
+    int n = mjson_printf(&mjson_print_fixed_buf, &fb, fmt_, num_);      \
+    if (0) printf("[%s] [%s] -> [%s] [%.*s]\n", fmt_, N, res_, n, tmp); \
+    ASSERT(n == (int) strlen(res_));                                    \
+    ASSERT(strncmp(tmp, res_, n) == 0);                                 \
+  } while (0)
+
+  TESTDOUBLE("%g", 0.0, "0");
+  TESTDOUBLE("%g", 0.123, "0.123");
+  TESTDOUBLE("%g", 0.00123, "0.00123");
+  TESTDOUBLE("%g", 0.123456333, "0.123456");
+  TESTDOUBLE("%g", 123.0, "123");
+  TESTDOUBLE("%g", 999999.0, "999999");
+  TESTDOUBLE("%g", 9999999.0, "1e+07");
+  TESTDOUBLE("%g", 44556677.0, "4.45567e+07");
+  TESTDOUBLE("%g", 1234567.2, "1.23457e+06");
+  TESTDOUBLE("%g", -987.65432, "-987.654");
+  TESTDOUBLE("%g", 0.0000000001, "1e-10");
+  TESTDOUBLE("%g", 2.34567e-57, "2.34567e-57");
+  TESTDOUBLE("%.*g", DBLWIDTH(7, 9999999.0), "9999999");
+  TESTDOUBLE("%.*g", DBLWIDTH(10, 0.123456333), "0.123456333");
+  TESTDOUBLE("%g", 123.456222, "123.456");
+  TESTDOUBLE("%.*g", DBLWIDTH(10, 123.456222), "123.456222");
+
+#ifndef _WIN32
+  TESTDOUBLE("%g", INFINITY, "inf");
+  TESTDOUBLE("%g", -INFINITY, "-inf");
+  TESTDOUBLE("%g", NAN, "nan");
+#else
+  TESTDOUBLE("%g", HUGE_VAL, "inf");
+  TESTDOUBLE("%g", -HUGE_VAL, "-inf");
+#endif
 
   {
-    char tmp[20];
     struct mjson_fixedbuf fb = {tmp, sizeof(tmp), 0};
     ASSERT(mjson_printf(&mjson_print_fixed_buf, &fb, "{%Q:%B}", "a", 1) == 10);
     str = "{\"a\":true}";
@@ -358,7 +406,6 @@ static void test_printf(void) {
   }
 
   {
-    char tmp[20];
     struct mjson_fixedbuf fb = {tmp, sizeof(tmp), 0};
     str = "{\"a\":\"\"}";
     ASSERT(mjson_printf(&mjson_print_fixed_buf, &fb, "{%Q:%Q}", "a", NULL) ==
@@ -401,7 +448,7 @@ static void test_printf(void) {
   }
 
   {
-    char tmp[100], s[] = "0\n\xfeg";
+    char s[] = "0\n\xfeg";
     struct mjson_fixedbuf fb = {tmp, sizeof(tmp), 0};
     ASSERT(mjson_printf(&mjson_print_fixed_buf, &fb, "[%V,%V,%V,%V]", 1, s, 2,
                         s, 3, s, 4, s) == 33);
@@ -417,13 +464,7 @@ static void test_printf(void) {
   }
 
   {
-    int n = mjson_printf(&mjson_print_file, stdout, "{%Q:%Q}\n", "message",
-                         "well done, test passed");
-    ASSERT(n == 37);
-  }
-
-  {
-    char tmp[100] = "", s[] = "\"002001200220616263\"";
+    char s[] = "\"002001200220616263\"";
     struct mjson_fixedbuf fb = {tmp, sizeof(tmp), 0};
     ASSERT(mjson_printf(&mjson_print_fixed_buf, &fb, "%H", 9,
                         "\x00 \x01 \x02 abc") == 20);
@@ -431,7 +472,7 @@ static void test_printf(void) {
   }
 
   {
-    char tmp[100] = "", s[] = "\"a/b\\nc\"";
+    char s[] = "\"a/b\\nc\"";
     struct mjson_fixedbuf fb = {tmp, sizeof(tmp), 0};
     ASSERT(mjson_printf(&mjson_print_fixed_buf, &fb, "%Q", "a/b\nc") == 8);
     ASSERT(strcmp(tmp, s) == 0);

@@ -1,6 +1,6 @@
 # mjson - a JSON parser + emitter + JSON-RPC engine
 
-[![Build Status](https://travis-ci.org/cesanta/mjson.svg?branch=master)](https://travis-ci.org/cesanta/mjson)
+[![Build Status]( https://github.com/cesanta/mjson/workflows/build/badge.svg)](https://github.com/cesanta/mjson/actions)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](https://opensource.org/licenses/MIT)
 [![Code Coverage](https://codecov.io/gh/cesanta/mjson/branch/master/graph/badge.svg)](https://codecov.io/gh/cesanta/mjson)
 
@@ -307,7 +307,8 @@ Print using `printf()`-like format string. Supported specifiers are:
 - `%.*Q` print quoted escaped string. Expect `int, char *`
 - `%s` print string as is. Expect NUL-terminated `char *`
 - `%.*s` print string as is. Expect `int, char *`
-- `%g`, `%f` print floating point number. Expect `double`
+- `%g`, print floating point number, precision is set to 6. Expect `double`
+- `%.*g`, print floating point number with given precision. Expect `int, double`
 - `%d`, `%u` print signed/unsigned integer. Expect `int`
 - `%ld`, `%lu` print signed/unsigned long integer. Expect `long`
 - `%B` print `true` or `false`. Expect `int`

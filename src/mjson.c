@@ -19,15 +19,22 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
+#include <float.h>
+#include <math.h>
+
 #include "mjson.h"
 
 #if defined(_MSC_VER)
-#define alloca _alloca
-#if _MSC_VER < 1700
+#define alloca(x) _alloca(x)
+#endif
+
+#if defined(_MSC_VER) && _MSC_VER < 1700
 #define va_copy(x, y) (x) = (y)
-#define snprintf _snprintf
+#define isinf(x) !_finite(x)
+#define isnan(x) _isnan(x)
 #endif
-#endif
+
+static double mystrtod(const char *str, char **end);
 
 static int mjson_esc(int c, int esc) {
   const char *p, *esc1 = "\b\f\n\r\t\\\"", *esc2 = "bfnrt\\\"";
@@ -104,7 +111,7 @@ int mjson(const char *s, int len, mjson_cb_t cb, void *ud) {
           tok = MJSON_TOK_FALSE;
         } else if (c == '-' || ((c >= '0' && c <= '9'))) {
           char *end = NULL;
-          strtod(&s[i], &end);
+          mystrtod(&s[i], &end);
           if (end != NULL) i += (int) (end - &s[i] - 1);
           tok = MJSON_TOK_NUMBER;
         } else if (c == '"') {
@@ -193,7 +200,7 @@ static int mjson_get_cb(int tok, const char *s, int off, int len, void *ud) {
   } else if (tok == '[') {
     if (data->d1 == data->d2 && data->path[data->pos] == '[') {
       data->i1 = 0;
-      data->i2 = (int) strtod(&data->path[data->pos + 1], NULL);
+      data->i2 = (int) mystrtod(&data->path[data->pos + 1], NULL);
       if (data->i1 == data->i2) {
         data->d2++;
         data->pos += 3;
@@ -253,7 +260,7 @@ int mjson_get_number(const char *s, int len, const char *path, double *v) {
   const char *p;
   int tok, n;
   if ((tok = mjson_find(s, len, path, &p, &n)) == MJSON_TOK_NUMBER) {
-    if (v != NULL) *v = strtod(p, NULL);
+    if (v != NULL) *v = mystrtod(p, NULL);
   }
   return tok == MJSON_TOK_NUMBER ? 1 : 0;
 }
@@ -473,10 +480,6 @@ int mjson_print_null(const char *ptr, int len, void *userdata) {
   return len;
 }
 
-int mjson_print_file(const char *ptr, int len, void *userdata) {
-  return (int) fwrite(ptr, 1, len, (FILE *) userdata);
-}
-
 int mjson_print_buf(mjson_print_fn_t fn, void *fnd, const char *buf, int len) {
   return fn(buf, len, fnd);
 }
@@ -485,12 +488,11 @@ int mjson_print_long(mjson_print_fn_t fn, void *fnd, long val, int is_signed) {
   unsigned long v = val, s = 0, n, i;
   char buf[20], t;
   if (is_signed && val < 0) {
-    buf[s++] = '-';
-    v = -val;
+    buf[s++] = '-', v = -val;
   }
   // This loop prints a number in reverse order. I guess this is because we
   // write numbers from right to left: least significant digit comes last.
-  // Maybe becase we use Arabic numbers, and Arabs write RTL?
+  // Maybe because we use Arabic numbers, and Arabs write RTL?
   for (n = 0; v > 0; v /= 10) buf[s + n++] = "0123456789"[v % 10];
   // Reverse a string
   for (i = 0; i < n / 2; i++)
@@ -503,10 +505,74 @@ int mjson_print_int(mjson_print_fn_t fn, void *fnd, int v, int s) {
   return mjson_print_long(fn, fnd, s ? (long) v : (unsigned) v, s);
 }
 
-int mjson_print_dbl(mjson_print_fn_t fn, void *fnd, double d, const char *fmt) {
+static int addexp(char *buf, int e, int sign) {
+  int n = 0;
+  buf[n++] = 'e';
+  buf[n++] = sign;
+  if (e > 400) return 0;
+  if (e < 10) buf[n++] = '0';
+  if (e >= 100) buf[n++] = (e / 100) + '0', e -= 100 * (e / 100);
+  if (e >= 10) buf[n++] = (e / 10) + '0', e -= 10 * (e / 10);
+  buf[n++] = e + '0';
+  return n;
+}
+
+int mjson_print_dbl(mjson_print_fn_t fn, void *fnd, double d, int width) {
   char buf[40];
-  int n = snprintf(buf, sizeof(buf), fmt, d);
-  return fn(buf, n, fnd);
+  int i, s = 0, n = 0, e = 0;
+  double t, mul;
+  if (d == 0.0) return fn("0", 1, fnd);
+  if (isinf(d)) return fn(d > 0 ? "inf" : "-inf", d > 0 ? 3 : 4, fnd);
+  if (isnan(d)) return fn("nan", 3, fnd);
+  if (d < 0.0) d = -d, buf[s++] = '-';
+
+  // Round
+  mul = 1.0;
+  while (d > 10.0 && d / mul >= 10.0) mul *= 10.0;
+  while (d < 1.0 && d / mul < 1.0) mul /= 10.0;
+  for (i = 0, t = mul * 5; i < width; i++) t *= 0.1;
+  d += t;
+  // Calculate exponent, and 'mul' for scientific representation
+  mul = 1.0;
+  while (d > 10.0 && d / mul >= 10.0) mul *= 10.0, e++;
+  while (d < 1.0 && d / mul < 1.0) mul /= 10.0, e--;
+
+  // printf(" --> %.*g %d %.10g\n", 10, d, e, t);
+
+  if (e >= width) {
+    struct mjson_fixedbuf fb = {buf + s, (int) sizeof(buf) - s, 0};
+    n = mjson_print_dbl(mjson_print_fixed_buf, &fb, d / mul, width);
+    // printf(" --> %.*g %d [%.*s]\n", 10, d / t, e, fb.len, fb.ptr);
+    n += addexp(buf + s + n, e, '+');
+    return fn(buf, s + n, fnd);
+  } else if (e <= -width) {
+    struct mjson_fixedbuf fb = {buf + s, (int) sizeof(buf) - s, 0};
+    n = mjson_print_dbl(mjson_print_fixed_buf, &fb, d / mul, width);
+    // printf(" --> %.*g %d [%.*s]\n", 10, d / mul, e, fb.len, fb.ptr);
+    n += addexp(buf + s + n, -e, '-');
+    return fn(buf, s + n, fnd);
+  } else {
+    t = 10.0;
+    for (i = 0; i < e; i++) t *= 10.0;
+    for (i = 0; d >= 1.0 && s + n < (int) sizeof(buf); i++) {
+      int ch = (int) (d / t);
+      if (n > 0 || ch > 0) buf[s + n++] = ch + '0';
+      d -= ch * t;
+      t /= 10.0;
+    }
+    if (n == 0) buf[s++] = '0';
+    if (s + n < (int) sizeof(buf)) buf[n + s++] = '.';
+    t = 0.1;
+    for (i = 0; s + n < (int) sizeof(buf) && n < width; i++) {
+      int ch = (int) (d / t);
+      buf[s + n++] = ch + '0';
+      d -= ch * t;
+      t /= 10.0;
+    }
+  }
+  while (n > 0 && buf[s + n - 1] == '0') n--;  // Trim trailing zeros
+  if (n > 0 && buf[s + n - 1] == '.') n--;     // Trim trailing dot
+  return fn(buf, s + n, fnd);
 }
 
 int mjson_print_str(mjson_print_fn_t fn, void *fnd, const char *s, int len) {
@@ -584,9 +650,11 @@ int mjson_vprintf(mjson_print_fn_t fn, void *fnd, const char *fmt,
         n += mjson_print_buf(fn, fnd, buf, len);
         i += 2;
       } else if (fc == 'g') {
-        n += mjson_print_dbl(fn, fnd, va_arg(ap, double), "%g");
-      } else if (fc == 'f') {
-        n += mjson_print_dbl(fn, fnd, va_arg(ap, double), "%f");
+        n += mjson_print_dbl(fn, fnd, va_arg(ap, double), 6);
+      } else if (strncmp(&fmt[i], ".*g", 3) == 0) {
+        int width = va_arg(ap, int);
+        n += mjson_print_dbl(fn, fnd, va_arg(ap, double), width);
+        i += 2;
 #if MJSON_ENABLE_BASE64
       } else if (fc == 'V') {
         int len = va_arg(ap, int);
@@ -627,13 +695,12 @@ int mjson_printf(mjson_print_fn_t fn, void *fnd, const char *fmt, ...) {
 }
 #endif /* MJSON_ENABLE_PRINT */
 
-#if MJSON_IMPLEMENT_STRTOD
-static inline int is_digit(int c) {
+static int is_digit(int c) {
   return c >= '0' && c <= '9';
 }
 
 /* NOTE: strtod() implementation by Yasuhiro Matsumoto. */
-double strtod(const char *str, char **end) {
+static double mystrtod(const char *str, char **end) {
   double d = 0.0;
   int sign = 1, n = 0;
   const char *p = str, *a = str;
@@ -642,8 +709,9 @@ double strtod(const char *str, char **end) {
   if (*p == '-') {
     sign = -1;
     ++p;
-  } else if (*p == '+')
+  } else if (*p == '+') {
     ++p;
+  }
   if (is_digit(*p)) {
     d = (double) (*p++ - '0');
     while (*p && is_digit(*p)) {
@@ -652,8 +720,9 @@ double strtod(const char *str, char **end) {
       ++n;
     }
     a = p;
-  } else if (*p != '.')
+  } else if (*p != '.') {
     goto done;
+  }
   d *= sign;
 
   /* fraction part */
@@ -676,30 +745,13 @@ double strtod(const char *str, char **end) {
 
   /* exponential part */
   if ((*p == 'E') || (*p == 'e')) {
-    int e = 0;
-    ++p;
-
-    sign = 1;
-    if (*p == '-') {
-      sign = -1;
-      ++p;
-    } else if (*p == '+')
-      ++p;
-
-    if (is_digit(*p)) {
-      while (*p == '0') ++p;
-      e = (int) (*p++ - '0');
-      while (*p && is_digit(*p)) {
-        e = e * 10 + (int) (*p - '0');
-        ++p;
-      }
-      e *= sign;
-    } else if (!is_digit(*(a - 1))) {
-      a = str;
-      goto done;
-    } else if (*p == 0)
-      goto done;
-
+    int i, e = 0, neg = 0;
+    p++;
+    if (*p == '-') p++, neg++;
+    if (*p == '+') p++;
+    while (is_digit(*p)) e = e * 10 + *p++ - '0';
+    if (neg) e = -e;
+#if 0
     if (d == 2.2250738585072011 && e == -308) {
       d = 0.0;
       a = p;
@@ -710,10 +762,9 @@ double strtod(const char *str, char **end) {
       a = p;
       goto done;
     }
-    {
-      int i;
-      for (i = 0; i < 10; i++) d *= 10;
-    }
+#endif
+    for (i = 0; i < e; i++) d *= 10;
+    for (i = 0; i < -e; i++) d /= 10;
     a = p;
   } else if (p > str && !is_digit(*(p - 1))) {
     a = str;
@@ -724,7 +775,6 @@ done:
   if (end) *end = (char *) a;
   return d;
 }
-#endif
 
 #if MJSON_ENABLE_MERGE
 int mjson_merge(const char *s, int n, const char *s2, int n2,
@@ -733,11 +783,7 @@ int mjson_merge(const char *s, int n, const char *s2, int n2,
   if (n < 2) return len;
   len += fn("{", 1, userdata);
   while ((off = mjson_next(s, n, off, &koff, &klen, &voff, &vlen, &t)) != 0) {
-#if !defined(_MSC_VER)
-    char path[klen + 1];
-#else
     char *path = (char *) alloca(klen + 1);
-#endif
     const char *val;
     memcpy(path, "$.", 2);
     memcpy(path + 2, s + koff + 1, klen - 2);
@@ -761,11 +807,7 @@ int mjson_merge(const char *s, int n, const char *s2, int n2,
   // Add missing keys
   off = 0;
   while ((off = mjson_next(s2, n2, off, &koff, &klen, &voff, &vlen, &t)) != 0) {
-#if !defined(_MSC_VER)
-    char path[klen + 1];
-#else
     char *path = (char *) alloca(klen + 1);
-#endif
     const char *val;
     if (t == MJSON_TOK_NULL) continue;
     memcpy(path, "$.", 2);

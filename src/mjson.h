@@ -23,7 +23,6 @@
 #define MJSON_H
 
 #include <stdarg.h>
-#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -126,7 +125,6 @@ int mjson_print_long(mjson_print_fn_t, void *, long value, int is_signed);
 int mjson_print_buf(mjson_print_fn_t fn, void *, const char *buf, int len);
 
 int mjson_print_null(const char *ptr, int len, void *userdata);
-int mjson_print_file(const char *ptr, int len, void *userdata);
 int mjson_print_fixed_buf(const char *ptr, int len, void *userdata);
 int mjson_print_dynamic_buf(const char *ptr, int len, void *userdata);
 
