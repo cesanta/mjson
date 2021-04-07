@@ -125,6 +125,17 @@ static void test_find(void) {
   ASSERT(mjson_find(str, strlen(str), "$.a1[1].x", &p, &n) == MJSON_TOK_NUMBER);
   ASSERT(mjson_find(str, strlen(str), "$.a1[2].x", &p, &n) ==
          MJSON_TOK_INVALID);
+
+  str = "{\"a.b\":{\"c\":1}}";
+  ASSERT(mjson_find(str, strlen(str), "$.a.b", &p, &n) == MJSON_TOK_INVALID);
+  ASSERT(mjson_find(str, strlen(str), "$.a\\.b", &p, &n) == MJSON_TOK_OBJECT);
+  ASSERT(mjson_find(str, strlen(str), "$.a\\.b.c", &p, &n) == MJSON_TOK_NUMBER);
+  ASSERT(n == 1 && *p == '1');
+
+  str = "{\"[]\":1}";
+  ASSERT(mjson_find(str, strlen(str), "$.[]", &p, &n) == MJSON_TOK_INVALID);
+  ASSERT(mjson_find(str, strlen(str), "$.\\[\\]", &p, &n) == MJSON_TOK_NUMBER);
+  ASSERT(n == 1 && *p == '1');
 }
 
 // Compare two double numbers

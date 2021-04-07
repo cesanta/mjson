@@ -181,10 +181,32 @@ struct msjon_get_data {
   int tok;              // Returned token
 };
 
-static int mjson_plen(const char *s) {
-  int i = 0;
-  while (s[i] != '\0' && s[i] != '.' && s[i] != '[') i++;
+#include <stdio.h>
+
+static int plen1(const char *s) {
+  int i = 0, n = 0;
+  while (s[i] != '\0' && s[i] != '.' && s[i] != '[')
+    n++, i += s[i] == '\\' ? 2 : 1;
+  // printf("PLEN: s: [%s], [%.*s] => %d\n", s, i, s, n);
+  return n;
+}
+
+static int plen2(const char *s) {
+  int i = 0, n = 0;
+  while (s[i] != '\0' && s[i] != '.' && s[i] != '[')
+    n++, i += s[i] == '\\' ? 2 : 1;
+  // printf("PLEN: s: [%s], [%.*s] => %d\n", s, i, s, n);
   return i;
+}
+
+static int kcmp(const char *a, const char *b, int n) {
+  int i = 0, j = 0, r = 0;
+  for (i = 0, j = 0; j < n; i++, j++) {
+    if (b[i] == '\\') i++;
+    if ((r = a[j] - b[i]) != 0) return r;
+  }
+  // printf("KCMP: a: [%.*s], b:[%.*s] ==> %d\n", n, a, i, b, r);
+  return r;
 }
 
 static int mjson_get_cb(int tok, const char *s, int off, int len, void *ud) {
@@ -220,10 +242,10 @@ static int mjson_get_cb(int tok, const char *s, int off, int len, void *ud) {
   } else if (tok == MJSON_TOK_KEY && data->d1 == data->d2 + 1 &&
              data->path[data->pos] == '.' && s[off] == '"' &&
              s[off + len - 1] == '"' &&
-             mjson_plen(&data->path[data->pos + 1]) == len - 2 &&
-             !memcmp(s + off + 1, &data->path[data->pos + 1], len - 2)) {
+             plen1(&data->path[data->pos + 1]) == len - 2 &&
+             kcmp(s + off + 1, &data->path[data->pos + 1], len - 2) == 0) {
     data->d2++;
-    data->pos += len - 1;
+    data->pos += plen2(&data->path[data->pos + 1]) + 1;
   } else if (tok == MJSON_TOK_KEY && data->d1 == data->d2) {
     return 1;  // Exhausted path, not found
   } else if (tok == '}' || tok == ']') {

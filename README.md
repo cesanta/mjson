@@ -129,14 +129,17 @@ In a JSON string `s`, `len`, find an element by its JSONPATH `path`.
 Save found element in `tokptr`, `toklen`.
 If not found, return `JSON_TOK_INVALID`. If found, return one of:
 `MJSON_TOK_STRING`, `MJSON_TOK_NUMBER`, `MJSON_TOK_TRUE`, `MJSON_TOK_FALSE`,
-`MJSON_TOK_NULL`, `MJSON_TOK_ARRAY`, `MJSON_TOK_OBJECT`. Example:
+`MJSON_TOK_NULL`, `MJSON_TOK_ARRAY`, `MJSON_TOK_OBJECT`. If a searched key
+contains `.`, `[` or `]` characters, they should be escaped by a backslash.
+
+Example:
 
 ```c
-// s, len is a JSON string: {"foo": { "bar": [ 1, 2, 3] }, "baz": true} 
+// s, len is a JSON string: {"foo": { "bar": [ 1, 2, 3] }, "b.az": true} 
 char *p;
 int n;
 assert(mjson_find(s, len, "$.foo.bar[1]", &p, &n) == MJSON_TOK_NUMBER);
-assert(mjson_find(s, len, "$.baz", &p, &n) == MJSON_TOK_TRUE);
+assert(mjson_find(s, len, "$.b\\.az", &p, &n) == MJSON_TOK_TRUE);
 assert(mjson_find(s, len, "$", &p, &n) == MJSON_TOK_OBJECT);
 ```
 
