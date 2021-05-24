@@ -524,7 +524,7 @@ int mjson_print_long(mjson_print_fn_t fn, void *fnd, long val, int is_signed) {
 }
 
 int mjson_print_int(mjson_print_fn_t fn, void *fnd, int v, int s) {
-  return mjson_print_long(fn, fnd, s ? (long) v : (unsigned) v, s);
+  return mjson_print_long(fn, fnd, s ? (long) v : (long) (unsigned) v, s);
 }
 
 static int addexp(char *buf, int e, int sign) {
