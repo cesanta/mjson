@@ -702,7 +702,6 @@ int mjson_vprintf(mjson_print_fn_t fn, void *fnd, const char *fmt,
       n += mjson_print_buf(fn, fnd, &fmt[i++], 1);
     }
   }
-  va_end(xap);
   va_end(ap);
   return n;
 }
