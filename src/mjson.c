@@ -294,9 +294,9 @@ int mjson_get_bool(const char *s, int len, const char *path, int *v) {
 }
 
 static unsigned char unhex(unsigned char c) {
-  return (c >= '0' && c <= '9')   ? (c - '0')
-         : (c >= 'A' && c <= 'F') ? (c - '7')
-                                  : (c - 'W');
+  return (c >= '0' && c <= '9')   ? (unsigned char) (c - '0')
+         : (c >= 'A' && c <= 'F') ? (unsigned char) (c - '7')
+                                  : (unsigned char) (c - 'W');
 }
 
 static unsigned char mjson_unhex_nimble(const char *s) {
@@ -348,13 +348,13 @@ int mjson_get_hex(const char *s, int len, const char *x, char *to, int n) {
 }
 
 #if MJSON_ENABLE_BASE64
-static unsigned char mjson_base64rev(unsigned char c) {
+static unsigned char mjson_base64rev(int c) {
   if (c >= 'A' && c <= 'Z') {
-    return c - 'A';
+    return (unsigned char) (c - 'A');
   } else if (c >= 'a' && c <= 'z') {
-    return c + 26 - 'a';
+    return (unsigned char) (c + 26 - 'a');
   } else if (c >= '0' && c <= '9') {
-    return c + 52 - '0';
+    return (unsigned char) (c + 52 - '0');
   } else if (c == '+') {
     return 62;
   } else if (c == '/') {
@@ -365,20 +365,21 @@ static unsigned char mjson_base64rev(unsigned char c) {
 }
 
 int mjson_base64_dec(const char *src, int n, char *dst, int dlen) {
-  unsigned char *s = (unsigned char *) src, *d = (unsigned char *) dst;
-  const unsigned char *end = s + n;
+  const char *end = src + n;
   int len = 0;
-  while (s + 3 < end && len < dlen) {
-    unsigned char A = mjson_base64rev(s[0]), B = mjson_base64rev(s[1]),
-                  C = mjson_base64rev(s[2]), D = mjson_base64rev(s[3]);
-    d[len++] = (unsigned char) ((A << 2) | (B >> 4));
-    if (s[2] != '=' && len < dlen) {
-      d[len++] = (unsigned char) ((B << 4) | (C >> 2));
-      if (s[3] != '=' && len < dlen) d[len++] = (unsigned char) ((C << 6) | D);
+  while (src + 3 < end && len < dlen) {
+    unsigned char a = mjson_base64rev(src[0]), b = mjson_base64rev(src[1]),
+                  c = mjson_base64rev(src[2]), d = mjson_base64rev(src[3]);
+    dst[len++] = (char) (unsigned char) ((a << 2) | (b >> 4));
+    if (src[2] != '=' && len < dlen) {
+      dst[len++] = (char) (unsigned char) ((b << 4) | (c >> 2));
+      if (src[3] != '=' && len < dlen) {
+        dst[len++] = (char) (unsigned char) ((c << 6) | d);
+      }
     }
-    s += 4;
+    src += 4;
   }
-  if (len < dlen) d[len] = '\0';
+  if (len < dlen) dst[len] = '\0';
   return len;
 }
 
@@ -529,8 +530,8 @@ static int addexp(char *buf, int e, int sign) {
   buf[n++] = (char) sign;
   if (e > 400) return 0;
   if (e < 10) buf[n++] = '0';
-  if (e >= 100) buf[n++] = (char) (e / 100) + '0', e -= 100 * (e / 100);
-  if (e >= 10) buf[n++] = (char) (e / 10) + '0', e -= 10 * (e / 10);
+  if (e >= 100) buf[n++] = (char) (e / 100 + '0'), e -= 100 * (e / 100);
+  if (e >= 10) buf[n++] = (char) (e / 10 + '0'), e -= 10 * (e / 10);
   buf[n++] = (char) e + '0';
   return n;
 }
@@ -572,7 +573,7 @@ int mjson_print_dbl(mjson_print_fn_t fn, void *fnd, double d, int width) {
   } else {
     for (i = 0, t = mul; d >= 1.0 && s + n < (int) sizeof(buf); i++) {
       int ch = (int) (d / t);
-      if (n > 0 || ch > 0) buf[s + n++] = (char) ch + '0';
+      if (n > 0 || ch > 0) buf[s + n++] = (char) (ch + '0');
       d -= ch * t;
       t /= 10.0;
     }
@@ -583,7 +584,7 @@ int mjson_print_dbl(mjson_print_fn_t fn, void *fnd, double d, int width) {
     // printf(" 1--> [%g] -> [%.*s]\n", saved, s + n, buf);
     for (i = 0, t = 0.1; s + n < (int) sizeof(buf) && n < width; i++) {
       int ch = (int) (d / t);
-      buf[s + n++] = (char) ch + '0';
+      buf[s + n++] = (char) (ch + '0');
       d -= ch * t;
       t /= 10.0;
     }
