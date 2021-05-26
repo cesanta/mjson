@@ -112,7 +112,7 @@ struct mjson_fixedbuf {
 };
 
 int mjson_printf(mjson_print_fn_t, void *, const char *fmt, ...);
-int mjson_vprintf(mjson_print_fn_t, void *, const char *fmt, va_list ap);
+int mjson_vprintf(mjson_print_fn_t, void *, const char *fmt, va_list *ap);
 int mjson_print_str(mjson_print_fn_t, void *, const char *s, int len);
 int mjson_print_int(mjson_print_fn_t, void *, int value, int is_signed);
 int mjson_print_long(mjson_print_fn_t, void *, long value, int is_signed);
