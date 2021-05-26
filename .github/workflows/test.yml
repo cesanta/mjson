@@ -24,5 +24,6 @@ jobs:
   arm:
     runs-on: ubuntu-latest
     steps:
+    - uses: actions/checkout@v2
     - name: arm
       run: make -C test arm
