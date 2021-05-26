@@ -532,7 +532,7 @@ static int addexp(char *buf, int e, int sign) {
   if (e < 10) buf[n++] = '0';
   if (e >= 100) buf[n++] = (char) (e / 100 + '0'), e -= 100 * (e / 100);
   if (e >= 10) buf[n++] = (char) (e / 10 + '0'), e -= 10 * (e / 10);
-  buf[n++] = (char) e + '0';
+  buf[n++] = (char) (e + '0');
   return n;
 }
 
