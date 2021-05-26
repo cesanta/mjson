@@ -7,8 +7,8 @@ PDIR ?= $(realpath $(CURDIR)/..)
 VC98 = docker run -v $(PDIR):$(PDIR) -w $(CURDIR) mdashnet/vc98
 VCFLAGS = /nologo /W3 /O1 /I../src /MD $(DEFS) $(TFLAGS)
 VC2017 = docker run -v $(PDIR):$(PDIR) -w $(CURDIR) mdashnet/vc2017
-LIN = docker run -it --rm -v $(PDIR):$(PDIR) -w $(CURDIR) mdashnet/cc2
-ARM = docker run -it --rm -v $(PDIR):$(PDIR) -w $(CURDIR) mdashnet/armgcc
+LIN = docker run -v $(PDIR):$(PDIR) -w $(CURDIR) mdashnet/cc2
+ARM = docker run -v $(PDIR):$(PDIR) -w $(CURDIR) mdashnet/armgcc
 
 ifeq ($(shell uname -s),Darwin)
 ifeq ($(CC),clang)
