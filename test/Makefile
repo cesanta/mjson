@@ -1,12 +1,14 @@
 all: test
 DEFS = -DMJSON_ENABLE_MERGE=1 -DMJSON_ENABLE_PRETTY=1
-CFLAGS ?= -g -W -Wall -Werror -I../src $(DEFS)
+WARN ?= -W -Wall -Werror -Wshadow -Wdouble-promotion -fno-common -Wconversion
+CFLAGS ?= $(WARN) -g3 -Os -I../src $(DEFS)
 GCOVCMD ?= true
 PDIR ?= $(realpath $(CURDIR)/..)
 VC98 = docker run -v $(PDIR):$(PDIR) -w $(CURDIR) mdashnet/vc98
 VCFLAGS = /nologo /W3 /O1 /I../src /MD $(DEFS) $(TFLAGS)
 VC2017 = docker run -v $(PDIR):$(PDIR) -w $(CURDIR) mdashnet/vc2017
-LIN = docker run -it --rm -v $(PDIR):$(PDIR) -w $(CURDIR) mdashnet/cc2  
+LIN = docker run -it --rm -v $(PDIR):$(PDIR) -w $(CURDIR) mdashnet/cc2
+ARM = docker run -it --rm -v $(PDIR):$(PDIR) -w $(CURDIR) mdashnet/armgcc
 
 ifeq ($(shell uname -s),Darwin)
 ifeq ($(CC),clang)
@@ -25,6 +27,9 @@ linux: CFLAGS += -O2 -fsanitize=address,undefined,shift,null,return,bounds,align
 linux: CC = $(LIN) cc
 linux: CXX = $(LIN) c++
 linux: DEBUGGER = $(LIN)
+
+arm: unit_test.c ../src/mjson.h ../src/mjson.c
+	$(ARM) arm-none-eabi-gcc ../src/mjson.c unit_test.c $(CFLAGS) --specs=nosys.specs -o unit_test
 
 vc98: unit_test.c ../src/mjson.h ../src/mjson.c
 	$(VC98) wine cl ../src/mjson.c unit_test.c $(VCFLAGS) /Fe$@.exe

@@ -66,22 +66,17 @@
 extern "C" {
 #endif
 
-enum {
-  MJSON_ERROR_INVALID_INPUT = -1,
-  MJSON_ERROR_TOO_DEEP = -2,
-};
-
-enum mjson_tok {
-  MJSON_TOK_INVALID = 0,
-  MJSON_TOK_KEY = 1,
-  MJSON_TOK_STRING = 11,
-  MJSON_TOK_NUMBER = 12,
-  MJSON_TOK_TRUE = 13,
-  MJSON_TOK_FALSE = 14,
-  MJSON_TOK_NULL = 15,
-  MJSON_TOK_ARRAY = 91,
-  MJSON_TOK_OBJECT = 123,
-};
+#define MJSON_ERROR_INVALID_INPUT (-1)
+#define MJSON_ERROR_TOO_DEEP (-2)
+#define MJSON_TOK_INVALID 0
+#define MJSON_TOK_KEY 1
+#define MJSON_TOK_STRING 11
+#define MJSON_TOK_NUMBER 12
+#define MJSON_TOK_TRUE 13
+#define MJSON_TOK_FALSE 14
+#define MJSON_TOK_NULL 15
+#define MJSON_TOK_ARRAY 91
+#define MJSON_TOK_OBJECT 123
 #define MJSON_TOK_IS_VALUE(t) ((t) > 10 && (t) < 20)
 
 typedef int (*mjson_cb_t)(int ev, const char *s, int off, int len, void *ud);
@@ -91,8 +86,7 @@ typedef int (*mjson_cb_t)(int ev, const char *s, int off, int len, void *ud);
 #endif
 
 int mjson(const char *s, int len, mjson_cb_t cb, void *ud);
-enum mjson_tok mjson_find(const char *s, int len, const char *jp,
-                          const char **tokptr, int *toklen);
+int mjson_find(const char *s, int len, const char *jp, const char **, int *);
 int mjson_get_number(const char *s, int len, const char *path, double *v);
 int mjson_get_bool(const char *s, int len, const char *path, int *v);
 int mjson_get_string(const char *s, int len, const char *path, char *to, int n);
@@ -123,6 +117,7 @@ int mjson_print_str(mjson_print_fn_t, void *, const char *s, int len);
 int mjson_print_int(mjson_print_fn_t, void *, int value, int is_signed);
 int mjson_print_long(mjson_print_fn_t, void *, long value, int is_signed);
 int mjson_print_buf(mjson_print_fn_t fn, void *, const char *buf, int len);
+int mjson_print_dbl(mjson_print_fn_t fn, void *, double, int width);
 
 int mjson_print_null(const char *ptr, int len, void *userdata);
 int mjson_print_fixed_buf(const char *ptr, int len, void *userdata);

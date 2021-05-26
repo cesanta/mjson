@@ -27,27 +27,27 @@ static void test_cb(void) {
   const char *str;
   {
     const char *s = "{\"a\": true, \"b\": [ null, 3 ]}";
-    ASSERT(mjson(s, strlen(s), NULL, NULL) == (int) strlen(s));
+    ASSERT(mjson(s, (int) strlen(s), NULL, NULL) == (int) strlen(s));
   }
   {
     const char *s = "[ 1, 2 ,  null, true,false,\"foo\"  ]";
-    ASSERT(mjson(s, strlen(s), NULL, NULL) == (int) strlen(s));
+    ASSERT(mjson(s, (int) strlen(s), NULL, NULL) == (int) strlen(s));
   }
   {
     const char *s = "123";
-    ASSERT(mjson(s, strlen(s), NULL, NULL) == (int) strlen(s));
+    ASSERT(mjson(s, (int) strlen(s), NULL, NULL) == (int) strlen(s));
   }
   {
     const char *s = "\"foo\"";
-    ASSERT(mjson(s, strlen(s), NULL, NULL) == (int) strlen(s));
+    ASSERT(mjson(s, (int) strlen(s), NULL, NULL) == (int) strlen(s));
   }
   {
     const char *s = "123 ";  // Trailing space
-    ASSERT(mjson(s, strlen(s), NULL, NULL) == (int) strlen(s) - 1);
+    ASSERT(mjson(s, (int) strlen(s), NULL, NULL) == (int) strlen(s) - 1);
   }
   {
     const char *s = "[[[[[[[[[[[[[[[[[[[[[";
-    ASSERT(mjson(s, strlen(s), NULL, NULL) == MJSON_ERROR_TOO_DEEP);
+    ASSERT(mjson(s, (int) strlen(s), NULL, NULL) == MJSON_ERROR_TOO_DEEP);
   }
 
   str = "\"abc\"";
@@ -110,31 +110,44 @@ static void test_find(void) {
 
   // Test the shortcut: as soon as we find an element, stop the traversal
   str = "{\"a\":[1,2,garbage here!!";
-  ASSERT(mjson_find(str, strlen(str), "$.a[0]", &p, &n) == MJSON_TOK_NUMBER);
-  ASSERT(mjson_find(str, strlen(str), "$.a[1]", &p, &n) == MJSON_TOK_NUMBER);
-  ASSERT(mjson_find(str, strlen(str), "$.a[2]", &p, &n) == MJSON_TOK_INVALID);
+  ASSERT(mjson_find(str, (int) strlen(str), "$.a[0]", &p, &n) ==
+         MJSON_TOK_NUMBER);
+  ASSERT(mjson_find(str, (int) strlen(str), "$.a[1]", &p, &n) ==
+         MJSON_TOK_NUMBER);
+  ASSERT(mjson_find(str, (int) strlen(str), "$.a[2]", &p, &n) ==
+         MJSON_TOK_INVALID);
 
   // Test array iteration
   str = "{\"a\":[1,2],\"b\":[3,4,5,6]}";
-  ASSERT(mjson_find(str, strlen(str), "$.a[0]", &p, &n) == MJSON_TOK_NUMBER);
-  ASSERT(mjson_find(str, strlen(str), "$.a[1]", &p, &n) == MJSON_TOK_NUMBER);
-  ASSERT(mjson_find(str, strlen(str), "$.a[2]", &p, &n) == MJSON_TOK_INVALID);
+  ASSERT(mjson_find(str, (int) strlen(str), "$.a[0]", &p, &n) ==
+         MJSON_TOK_NUMBER);
+  ASSERT(mjson_find(str, (int) strlen(str), "$.a[1]", &p, &n) ==
+         MJSON_TOK_NUMBER);
+  ASSERT(mjson_find(str, (int) strlen(str), "$.a[2]", &p, &n) ==
+         MJSON_TOK_INVALID);
 
   str = "{\"a1\":[{\"x\":1},{\"x\":2}],\"a2\":[{\"x\":3},{\"x\":4}]}";
-  ASSERT(mjson_find(str, strlen(str), "$.a1[0].x", &p, &n) == MJSON_TOK_NUMBER);
-  ASSERT(mjson_find(str, strlen(str), "$.a1[1].x", &p, &n) == MJSON_TOK_NUMBER);
-  ASSERT(mjson_find(str, strlen(str), "$.a1[2].x", &p, &n) ==
+  ASSERT(mjson_find(str, (int) strlen(str), "$.a1[0].x", &p, &n) ==
+         MJSON_TOK_NUMBER);
+  ASSERT(mjson_find(str, (int) strlen(str), "$.a1[1].x", &p, &n) ==
+         MJSON_TOK_NUMBER);
+  ASSERT(mjson_find(str, (int) strlen(str), "$.a1[2].x", &p, &n) ==
          MJSON_TOK_INVALID);
 
   str = "{\"a.b\":{\"c\":1}}";
-  ASSERT(mjson_find(str, strlen(str), "$.a.b", &p, &n) == MJSON_TOK_INVALID);
-  ASSERT(mjson_find(str, strlen(str), "$.a\\.b", &p, &n) == MJSON_TOK_OBJECT);
-  ASSERT(mjson_find(str, strlen(str), "$.a\\.b.c", &p, &n) == MJSON_TOK_NUMBER);
+  ASSERT(mjson_find(str, (int) strlen(str), "$.a.b", &p, &n) ==
+         MJSON_TOK_INVALID);
+  ASSERT(mjson_find(str, (int) strlen(str), "$.a\\.b", &p, &n) ==
+         MJSON_TOK_OBJECT);
+  ASSERT(mjson_find(str, (int) strlen(str), "$.a\\.b.c", &p, &n) ==
+         MJSON_TOK_NUMBER);
   ASSERT(n == 1 && *p == '1');
 
   str = "{\"[]\":1}";
-  ASSERT(mjson_find(str, strlen(str), "$.[]", &p, &n) == MJSON_TOK_INVALID);
-  ASSERT(mjson_find(str, strlen(str), "$.\\[\\]", &p, &n) == MJSON_TOK_NUMBER);
+  ASSERT(mjson_find(str, (int) strlen(str), "$.[]", &p, &n) ==
+         MJSON_TOK_INVALID);
+  ASSERT(mjson_find(str, (int) strlen(str), "$.\\[\\]", &p, &n) ==
+         MJSON_TOK_NUMBER);
   ASSERT(n == 1 && *p == '1');
 }
 
@@ -166,12 +179,12 @@ static void test_get_number(void) {
   ASSERT(mjson_get_number("[1.23,-43.47,17]", 16, "$[3]", &v) == 0);
   {
     const char *s = "{\"a1\":[1,2,{\"a2\":4},[],{}],\"a\":3}";
-    ASSERT(mjson_get_number(s, strlen(s), "$.a", &v) == 1 && v == 3);
+    ASSERT(mjson_get_number(s, (int) strlen(s), "$.a", &v) == 1 && v == 3);
   }
   {
     const char *s = "[1,{\"a\":2}]";
-    ASSERT(mjson_get_number(s, strlen(s), "$[0]", &v) == v && v == 1);
-    ASSERT(mjson_get_number(s, strlen(s), "$[1].a", &v) == 1 && v == 2);
+    ASSERT(mjson_get_number(s, (int) strlen(s), "$[0]", &v) == v && v == 1);
+    ASSERT(mjson_get_number(s, (int) strlen(s), "$[1].a", &v) == 1 && v == 2);
   }
   ASSERT(mjson_get_number("[[2,1]]", 7, "$[0][1]", &v) == 1 && v == 1);
   ASSERT(mjson_get_number("[[2,1]]", 7, "$[0][0]", &v) == 1 && v == 2);
@@ -211,33 +224,38 @@ static void test_get_bool(void) {
   ASSERT(mjson_get_bool("", 0, "$", &v) == 0);
   ASSERT(mjson_get_bool("true", 4, "$", &v) == 1 && v == 1);
   ASSERT(mjson_get_bool("false", 5, "$", &v) == 1 && v == 0);
-  ASSERT(mjson_get_number(s, strlen(s), "$.state.version", &x) == 1 && x == 36);
-  ASSERT(mjson_get_bool(s, strlen(s), "$.state.a", &v) == 1 && v == 0);
-  ASSERT(mjson_get_bool(s, strlen(s), "$.state.lights", &v) == 1 && v == 1);
+  ASSERT(mjson_get_number(s, (int) strlen(s), "$.state.version", &x) == 1 &&
+         x == 36);
+  ASSERT(mjson_get_bool(s, (int) strlen(s), "$.state.a", &v) == 1 && v == 0);
+  ASSERT(mjson_get_bool(s, (int) strlen(s), "$.state.lights", &v) == 1 &&
+         v == 1);
 }
 
 static void test_get_string(void) {
   char buf[100];
   {
     const char *s = "{\"a\":\"f\too\"}";
-    ASSERT(mjson_get_string(s, strlen(s), "$.a", buf, sizeof(buf)) == 4);
+    ASSERT(mjson_get_string(s, (int) strlen(s), "$.a", buf, sizeof(buf)) == 4);
     ASSERT(strcmp(buf, "f\too") == 0);
   }
 
   {
     const char *s = "{\"ы\":\"превед\"}";
-    ASSERT(mjson_get_string(s, strlen(s), "$.ы", buf, sizeof(buf)) == 12);
+    ASSERT(mjson_get_string(s, (int) strlen(s), "$.ы", buf, sizeof(buf)) == 12);
     ASSERT(strcmp(buf, "превед") == 0);
   }
 
   {
     const char *s = "{\"a\":{\"x\":\"X\"},\"b\":{\"q\":\"Y\"}}";
-    ASSERT(mjson_get_string(s, strlen(s), "$.a.x", buf, sizeof(buf)) == 1);
+    ASSERT(mjson_get_string(s, (int) strlen(s), "$.a.x", buf, sizeof(buf)) ==
+           1);
     ASSERT(strcmp(buf, "X") == 0);
-    ASSERT(mjson_find(s, strlen(s), "$.a.q", NULL, NULL) == MJSON_TOK_INVALID);
-    ASSERT(mjson_get_string(s, strlen(s), "$.a.q", buf, sizeof(buf)) < 0);
+    ASSERT(mjson_find(s, (int) strlen(s), "$.a.q", NULL, NULL) ==
+           MJSON_TOK_INVALID);
+    ASSERT(mjson_get_string(s, (int) strlen(s), "$.a.q", buf, sizeof(buf)) < 0);
     // printf("-->[%s]\n", buf);
-    ASSERT(mjson_get_string(s, strlen(s), "$.b.q", buf, sizeof(buf)) == 1);
+    ASSERT(mjson_get_string(s, (int) strlen(s), "$.b.q", buf, sizeof(buf)) ==
+           1);
     ASSERT(strcmp(buf, "Y") == 0);
   }
 
@@ -247,45 +265,45 @@ static void test_get_string(void) {
     } foo;
     const char *s = "{\"a\":\"0123456789\"}";
     memset(&foo, 0, sizeof(foo));
-    ASSERT(mjson_get_string(s, strlen(s), "$.a", foo.buf1, sizeof(foo.buf1)) ==
-           -1);
+    ASSERT(mjson_get_string(s, (int) strlen(s), "$.a", foo.buf1,
+                            sizeof(foo.buf1)) == -1);
     ASSERT(foo.buf1[0] == '0' && foo.buf1[2] == '2');
     ASSERT(foo.buf2[0] == '\0');
   }
 
   {
     const char *s = "[\"MA==\",\"MAo=\",\"MAr+\",\"MAr+Zw==\"]";
-    ASSERT(mjson_get_base64(s, strlen(s), "$[0]", buf, sizeof(buf)) == 1);
+    ASSERT(mjson_get_base64(s, (int) strlen(s), "$[0]", buf, sizeof(buf)) == 1);
     ASSERT(strcmp(buf, "0") == 0);
-    ASSERT(mjson_get_base64(s, strlen(s), "$[1]", buf, sizeof(buf)) == 2);
+    ASSERT(mjson_get_base64(s, (int) strlen(s), "$[1]", buf, sizeof(buf)) == 2);
     ASSERT(strcmp(buf, "0\n") == 0);
-    ASSERT(mjson_get_base64(s, strlen(s), "$[2]", buf, sizeof(buf)) == 3);
+    ASSERT(mjson_get_base64(s, (int) strlen(s), "$[2]", buf, sizeof(buf)) == 3);
     ASSERT(strcmp(buf, "0\n\xfe") == 0);
-    ASSERT(mjson_get_base64(s, strlen(s), "$[3]", buf, sizeof(buf)) == 4);
+    ASSERT(mjson_get_base64(s, (int) strlen(s), "$[3]", buf, sizeof(buf)) == 4);
     ASSERT(strcmp(buf, "0\n\xfeg") == 0);
   }
 
   {
     const char *s = "[\"200a\",\"fe31\",123]";
-    ASSERT(mjson_get_hex(s, strlen(s), "$[0]", buf, sizeof(buf)) == 2);
+    ASSERT(mjson_get_hex(s, (int) strlen(s), "$[0]", buf, sizeof(buf)) == 2);
     ASSERT(strcmp(buf, " \n") == 0);
-    ASSERT(mjson_get_hex(s, strlen(s), "$[1]", buf, sizeof(buf)) == 2);
+    ASSERT(mjson_get_hex(s, (int) strlen(s), "$[1]", buf, sizeof(buf)) == 2);
     ASSERT(strcmp(buf, "\xfe\x31") == 0);
-    ASSERT(mjson_get_hex(s, strlen(s), "$[2]", buf, sizeof(buf)) < 0);
+    ASSERT(mjson_get_hex(s, (int) strlen(s), "$[2]", buf, sizeof(buf)) < 0);
   }
 
   {
     const char *s = "[1,2]";
     double dv;
-    ASSERT(mjson_get_number(s, strlen(s), "$[0]", &dv) == 1 && dv == 1);
-    ASSERT(mjson_get_number(s, strlen(s), "$[1]", &dv) == 1 && dv == 2);
-    ASSERT(mjson_get_number(s, strlen(s), "$[3]", &dv) == 0);
+    ASSERT(mjson_get_number(s, (int) strlen(s), "$[0]", &dv) == 1 && dv == 1);
+    ASSERT(mjson_get_number(s, (int) strlen(s), "$[1]", &dv) == 1 && dv == 2);
+    ASSERT(mjson_get_number(s, (int) strlen(s), "$[3]", &dv) == 0);
   }
 
   {
     const char *s = "[1,2,\"hello \\u0026\\u003c\\u003e\\\"\"]";
     const char *expected = "hello &<>\"";
-    ASSERT(mjson_get_string(s, strlen(s), "$[2]", buf, sizeof(buf)) > 0);
+    ASSERT(mjson_get_string(s, (int) strlen(s), "$[2]", buf, sizeof(buf)) > 0);
     ASSERT(strcmp(buf, expected) == 0);
   }
 }
@@ -379,7 +397,7 @@ static void test_printf(void) {
     int n = mjson_printf(&mjson_print_fixed_buf, &fb, fmt_, num_);      \
     if (0) printf("[%s] [%s] -> [%s] [%.*s]\n", fmt_, N, res_, n, tmp); \
     ASSERT(n == (int) strlen(res_));                                    \
-    ASSERT(strncmp(tmp, res_, n) == 0);                                 \
+    ASSERT(strncmp(tmp, res_, (size_t) n) == 0);                        \
   } while (0)
 
   TESTDOUBLE("%g", 0.0, "0");
@@ -417,9 +435,9 @@ static void test_printf(void) {
   TESTDOUBLE("%.*g", DBLWIDTH(10, 123.456222), "123.456222");
 
 #ifndef _WIN32
-  TESTDOUBLE("%g", INFINITY, "inf");
-  TESTDOUBLE("%g", -INFINITY, "-inf");
-  TESTDOUBLE("%g", NAN, "nan");
+  TESTDOUBLE("%g", (double) INFINITY, "inf");
+  TESTDOUBLE("%g", (double) -INFINITY, "-inf");
+  TESTDOUBLE("%g", (double) NAN, "nan");
 #else
   TESTDOUBLE("%g", HUGE_VAL, "inf");
   TESTDOUBLE("%g", -HUGE_VAL, "-inf");
@@ -542,7 +560,7 @@ static void test_rpc(void) {
   req = "{\"id\": 1, \"method\": \"rpc.list\"}";
   res = "{\"id\":1,\"result\":[\"rpc.list\"]}\n";
   fb.len = 0;
-  jsonrpc_process(req, strlen(req), mjson_print_fixed_buf, &fb, NULL);
+  jsonrpc_process(req, (int) strlen(req), mjson_print_fixed_buf, &fb, NULL);
   ASSERT(strcmp(buf, res) == 0);
 
   // Call non-existent method
@@ -551,7 +569,7 @@ static void test_rpc(void) {
       "{\"id\":1,\"error\":{\"code\":-32601,\"message\":\"method not "
       "found\"}}\n";
   fb.len = 0;
-  jsonrpc_process(req, strlen(req), mjson_print_fixed_buf, &fb, NULL);
+  jsonrpc_process(req, (int) strlen(req), mjson_print_fixed_buf, &fb, NULL);
   ASSERT(strcmp(buf, res) == 0);
 
   // Register our own function
@@ -559,14 +577,15 @@ static void test_rpc(void) {
   res = "{\"id\":2,\"result\":{\"x\":1.23,\"ud\":\"hi\"}}\n";
   fb.len = 0;
   jsonrpc_export("foo", foo);
-  jsonrpc_process(req, strlen(req), mjson_print_fixed_buf, &fb, (void *) "hi");
+  jsonrpc_process(req, (int) strlen(req), mjson_print_fixed_buf, &fb,
+                  (void *) "hi");
   ASSERT(strcmp(buf, res) == 0);
 
   // Test for bad frame
   req = "boo\n";
   res = "{\"error\":{\"code\":-32700,\"message\":\"boo\\n\"}}\n";
   fb.len = 0;
-  jsonrpc_process(req, strlen(req), mjson_print_fixed_buf, &fb, NULL);
+  jsonrpc_process(req, (int) strlen(req), mjson_print_fixed_buf, &fb, NULL);
   ASSERT(strcmp(buf, res) == 0);
 
   // Test simple error response, without data
@@ -574,7 +593,7 @@ static void test_rpc(void) {
   res = "{\"id\":3,\"error\":{\"code\":123,\"message\":\"\"}}\n";
   jsonrpc_export("foo1", foo1);
   fb.len = 0;
-  jsonrpc_process(req, strlen(req), mjson_print_fixed_buf, &fb, NULL);
+  jsonrpc_process(req, (int) strlen(req), mjson_print_fixed_buf, &fb, NULL);
   ASSERT(strcmp(buf, res) == 0);
 
   // Test more complex error response, with data
@@ -584,27 +603,27 @@ static void test_rpc(void) {
       "true]}}\n";
   jsonrpc_export("foo2", foo2);
   fb.len = 0;
-  jsonrpc_process(req, strlen(req), mjson_print_fixed_buf, &fb, NULL);
+  jsonrpc_process(req, (int) strlen(req), mjson_print_fixed_buf, &fb, NULL);
   ASSERT(strcmp(buf, res) == 0);
 
   // Test notify - must not generate a response
   req = "{\"method\": \"ping\",\"params\":[1,true]}\n";
   fb.len = 0;
-  jsonrpc_process(req, strlen(req), mjson_print_fixed_buf, &fb, NULL);
+  jsonrpc_process(req, (int) strlen(req), mjson_print_fixed_buf, &fb, NULL);
   ASSERT(fb.len == 0);
 
   // Test success response
   req = "{\"id\":123,\"result\":[1,2,3]}";
   res = ">>{\"id\":123,\"result\":[1,2,3]}<<";
   fb.len = 0;
-  jsonrpc_process(req, strlen(req), mjson_print_fixed_buf, &fb, NULL);
+  jsonrpc_process(req, (int) strlen(req), mjson_print_fixed_buf, &fb, NULL);
   ASSERT(strcmp(buf, res) == 0);
 
   // Test error response
   req = "{\"id\":566,\"error\":{}}";
   res = ">>{\"id\":566,\"error\":{}}<<";
   fb.len = 0;
-  jsonrpc_process(req, strlen(req), mjson_print_fixed_buf, &fb, NULL);
+  jsonrpc_process(req, (int) strlen(req), mjson_print_fixed_buf, &fb, NULL);
   ASSERT(strcmp(buf, res) == 0);
 
   // Test glob pattern in the RPC function name
@@ -612,7 +631,7 @@ static void test_rpc(void) {
   res = "{\"id\":777,\"result\":[true]}\n";
   jsonrpc_export("Bar.*", foo3);
   fb.len = 0;
-  jsonrpc_process(req, strlen(req), mjson_print_fixed_buf, &fb, NULL);
+  jsonrpc_process(req, (int) strlen(req), mjson_print_fixed_buf, &fb, NULL);
   ASSERT(strcmp(buf, res) == 0);
 }
 
@@ -653,11 +672,11 @@ static void test_merge(void) {
   };
   for (i = 0; i < sizeof(tests) / sizeof(tests[0]); i += 3) {
     struct mjson_fixedbuf fb = {buf, sizeof(buf), 0};
-    int n = mjson_merge(tests[i], strlen(tests[i]), tests[i + 1],
-                        strlen(tests[i + 1]), mjson_print_fixed_buf, &fb);
+    int n = mjson_merge(tests[i], (int) strlen(tests[i]), tests[i + 1],
+                        (int) strlen(tests[i + 1]), mjson_print_fixed_buf, &fb);
     // printf("%s + %s = %.*s\n", tests[i], tests[i + 1], fb.len, fb.ptr);
     ASSERT(n == (int) strlen(tests[i + 2]));
-    ASSERT(strncmp(fb.ptr, tests[i + 2], fb.len) == 0);
+    ASSERT(strncmp(fb.ptr, tests[i + 2], (size_t) fb.len) == 0);
   }
 }
 
@@ -690,16 +709,18 @@ static void test_pretty(void) {
     char buf[512];
     struct mjson_fixedbuf fb = {buf, sizeof(buf), 0};
     const char *s = tests[i];
-    ASSERT(mjson_pretty(s, strlen(s), "  ", mjson_print_fixed_buf, &fb) > 0);
+    ASSERT(mjson_pretty(s, (int) strlen(s), "  ", mjson_print_fixed_buf, &fb) >
+           0);
     ASSERT(fb.len == (int) strlen(tests[i + 1]));
-    ASSERT(strncmp(fb.ptr, tests[i + 1], fb.len) == 0);
+    ASSERT(strncmp(fb.ptr, tests[i + 1], (size_t) fb.len) == 0);
     // printf("==> %s\n", buf);
 
     // Terse print
     fb.len = 0;
-    ASSERT(mjson_pretty(s, strlen(s), "", mjson_print_fixed_buf, &fb) > 0);
+    ASSERT(mjson_pretty(s, (int) strlen(s), "", mjson_print_fixed_buf, &fb) >
+           0);
     ASSERT(fb.len == (int) strlen(tests[i + 2]));
-    ASSERT(strncmp(fb.ptr, tests[i + 2], fb.len) == 0);
+    ASSERT(strncmp(fb.ptr, tests[i + 2], (size_t) fb.len) == 0);
     // printf("--> %s\n", buf);
   }
 }
@@ -709,47 +730,47 @@ static void test_next(void) {
 
   {
     const char *s = "{}";
-    ASSERT(mjson_next(s, strlen(s), 0, &a, &b, &c, &d, &t) == 0);
+    ASSERT(mjson_next(s, (int) strlen(s), 0, &a, &b, &c, &d, &t) == 0);
   }
 
   {
     const char *s = "{\"a\":1}";
-    ASSERT(mjson_next(s, strlen(s), 0, &a, &b, &c, &d, &t) == 6);
+    ASSERT(mjson_next(s, (int) strlen(s), 0, &a, &b, &c, &d, &t) == 6);
     ASSERT(a == 1 && b == 3 && c == 5 && d == 1 && t == MJSON_TOK_NUMBER);
-    ASSERT(mjson_next(s, strlen(s), 6, &a, &b, &c, &d, &t) == 0);
+    ASSERT(mjson_next(s, (int) strlen(s), 6, &a, &b, &c, &d, &t) == 0);
   }
 
   {
     const char *s = "{\"a\":123,\"b\":[1,2,3,{\"c\":1}],\"d\":null}";
-    ASSERT(mjson_next(s, strlen(s), 0, &a, &b, &c, &d, &t) == 8);
+    ASSERT(mjson_next(s, (int) strlen(s), 0, &a, &b, &c, &d, &t) == 8);
     ASSERT(a == 1 && b == 3 && c == 5 && d == 3 && t == MJSON_TOK_NUMBER);
-    ASSERT(mjson_next(s, strlen(s), 8, &a, &b, &c, &d, &t) == 28);
+    ASSERT(mjson_next(s, (int) strlen(s), 8, &a, &b, &c, &d, &t) == 28);
     ASSERT(a == 9 && b == 3 && c == 13 && d == 15 && t == MJSON_TOK_ARRAY);
-    ASSERT(mjson_next(s, strlen(s), 28, &a, &b, &c, &d, &t) == 37);
+    ASSERT(mjson_next(s, (int) strlen(s), 28, &a, &b, &c, &d, &t) == 37);
     ASSERT(a == 29 && b == 3 && c == 33 && d == 4 && t == MJSON_TOK_NULL);
-    ASSERT(mjson_next(s, strlen(s), 37, &a, &b, &c, &d, &t) == 0);
+    ASSERT(mjson_next(s, (int) strlen(s), 37, &a, &b, &c, &d, &t) == 0);
   }
 
   {
     const char *s = "[]";
-    ASSERT(mjson_next(s, strlen(s), 0, &a, &b, &c, &d, &t) == 0);
+    ASSERT(mjson_next(s, (int) strlen(s), 0, &a, &b, &c, &d, &t) == 0);
   }
 
   {
     const char *s = "[3,null,{},[1,2],{\"x\":[3]},\"hi\"]";
-    ASSERT(mjson_next(s, strlen(s), 0, &a, &b, &c, &d, &t) == 2);
+    ASSERT(mjson_next(s, (int) strlen(s), 0, &a, &b, &c, &d, &t) == 2);
     ASSERT(a == 0 && b == 0 && c == 1 && d == 1 && t == MJSON_TOK_NUMBER);
-    ASSERT(mjson_next(s, strlen(s), 2, &a, &b, &c, &d, &t) == 7);
+    ASSERT(mjson_next(s, (int) strlen(s), 2, &a, &b, &c, &d, &t) == 7);
     ASSERT(a == 1 && b == 0 && c == 3 && d == 4 && t == MJSON_TOK_NULL);
-    ASSERT(mjson_next(s, strlen(s), 7, &a, &b, &c, &d, &t) == 10);
+    ASSERT(mjson_next(s, (int) strlen(s), 7, &a, &b, &c, &d, &t) == 10);
     ASSERT(a == 2 && b == 0 && c == 8 && d == 2 && t == MJSON_TOK_OBJECT);
-    ASSERT(mjson_next(s, strlen(s), 10, &a, &b, &c, &d, &t) == 16);
+    ASSERT(mjson_next(s, (int) strlen(s), 10, &a, &b, &c, &d, &t) == 16);
     ASSERT(a == 3 && b == 0 && c == 11 && d == 5 && t == MJSON_TOK_ARRAY);
-    ASSERT(mjson_next(s, strlen(s), 16, &a, &b, &c, &d, &t) == 26);
+    ASSERT(mjson_next(s, (int) strlen(s), 16, &a, &b, &c, &d, &t) == 26);
     ASSERT(a == 4 && b == 0 && c == 17 && d == 9 && t == MJSON_TOK_OBJECT);
-    ASSERT(mjson_next(s, strlen(s), 26, &a, &b, &c, &d, &t) == 31);
+    ASSERT(mjson_next(s, (int) strlen(s), 26, &a, &b, &c, &d, &t) == 31);
     ASSERT(a == 5 && b == 0 && c == 27 && d == 4 && t == MJSON_TOK_STRING);
-    ASSERT(mjson_next(s, strlen(s), 31, &a, &b, &c, &d, &t) == 0);
+    ASSERT(mjson_next(s, (int) strlen(s), 31, &a, &b, &c, &d, &t) == 0);
   }
 }
 

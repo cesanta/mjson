@@ -269,13 +269,12 @@ static int mjson_get_cb(int tok, const char *s, int off, int len, void *ud) {
   return 0;
 }
 
-enum mjson_tok mjson_find(const char *s, int len, const char *jp,
-                          const char **tokptr, int *toklen) {
-  struct msjon_get_data data = {jp, 1,  0,      0,      0,
-                                0,  -1, tokptr, toklen, MJSON_TOK_INVALID};
+int mjson_find(const char *s, int n, const char *jp, const char **tp, int *tl) {
+  struct msjon_get_data data = {jp, 1,  0,  0,  0,
+                                0,  -1, tp, tl, MJSON_TOK_INVALID};
   if (jp[0] != '$') return MJSON_TOK_INVALID;
-  if (mjson(s, len, mjson_get_cb, &data) < 0) return MJSON_TOK_INVALID;
-  return (enum mjson_tok) data.tok;
+  if (mjson(s, n, mjson_get_cb, &data) < 0) return MJSON_TOK_INVALID;
+  return data.tok;
 }
 
 int mjson_get_number(const char *s, int len, const char *path, double *v) {
@@ -294,15 +293,15 @@ int mjson_get_bool(const char *s, int len, const char *path, int *v) {
   return tok == MJSON_TOK_TRUE || tok == MJSON_TOK_FALSE ? 1 : 0;
 }
 
+static unsigned char unhex(unsigned char c) {
+  return (c >= '0' && c <= '9')   ? (c - '0')
+         : (c >= 'A' && c <= 'F') ? (c - '7')
+                                  : (c - 'W');
+}
+
 static unsigned char mjson_unhex_nimble(const char *s) {
-  unsigned char i, v = 0;
-  for (i = 0; i < 2; i++) {
-    int c = s[i];
-    if (i > 0) v <<= 4;
-    v |= (c >= '0' && c <= '9') ? c - '0'
-                                : (c >= 'A' && c <= 'F') ? c - '7' : c - 'W';
-  }
-  return v;
+  return (unsigned char) (unhex(((unsigned char *) s)[0]) << 4) |
+         unhex(((unsigned char *) s)[1]);
 }
 
 static int mjson_unescape(const char *s, int len, char *to, int n) {
@@ -313,12 +312,12 @@ static int mjson_unescape(const char *s, int len, char *to, int n) {
       // \u00xx from the ASCII range. More complex chars would require
       // dragging in a UTF8 library, which is too much for us
       if (s[i + 2] != '0' || s[i + 3] != '0') return -1;  // Too much, give up
-      to[j] = mjson_unhex_nimble(s + i + 4);
+      ((unsigned char *) to)[j] = mjson_unhex_nimble(s + i + 4);
       i += 5;
     } else if (s[i] == '\\' && i + 1 < len) {
       int c = mjson_esc(s[i + 1], 0);
       if (c == 0) return -1;
-      to[j] = c;
+      to[j] = (char) (unsigned char) c;
       i++;
     } else {
       to[j] = s[i];
@@ -349,7 +348,7 @@ int mjson_get_hex(const char *s, int len, const char *x, char *to, int n) {
 }
 
 #if MJSON_ENABLE_BASE64
-static int mjson_base64rev(int c) {
+static unsigned char mjson_base64rev(unsigned char c) {
   if (c >= 'A' && c <= 'Z') {
     return c - 'A';
   } else if (c >= 'a' && c <= 'z') {
@@ -366,21 +365,20 @@ static int mjson_base64rev(int c) {
 }
 
 int mjson_base64_dec(const char *src, int n, char *dst, int dlen) {
-  const char *end = src + n;
+  unsigned char *s = (unsigned char *) src, *d = (unsigned char *) dst;
+  const unsigned char *end = s + n;
   int len = 0;
-  while (src + 3 < end && len < dlen) {
-    int a = mjson_base64rev(src[0]), b = mjson_base64rev(src[1]),
-        c = mjson_base64rev(src[2]), d = mjson_base64rev(src[3]);
-    dst[len++] = (a << 2) | (b >> 4);
-    if (src[2] != '=' && len < dlen) {
-      dst[len++] = (b << 4) | (c >> 2);
-      if (src[3] != '=' && len < dlen) {
-        dst[len++] = (c << 6) | d;
-      }
+  while (s + 3 < end && len < dlen) {
+    unsigned char A = mjson_base64rev(s[0]), B = mjson_base64rev(s[1]),
+                  C = mjson_base64rev(s[2]), D = mjson_base64rev(s[3]);
+    d[len++] = (unsigned char) ((A << 2) | (B >> 4));
+    if (s[2] != '=' && len < dlen) {
+      d[len++] = (unsigned char) ((B << 4) | (C >> 2));
+      if (s[3] != '=' && len < dlen) d[len++] = (unsigned char) ((C << 6) | D);
     }
-    src += 4;
+    s += 4;
   }
-  if (len < dlen) dst[len] = '\0';
+  if (len < dlen) d[len] = '\0';
   return len;
 }
 
@@ -483,14 +481,14 @@ int mjson_print_fixed_buf(const char *ptr, int len, void *fndata) {
 int mjson_print_dynamic_buf(const char *ptr, int len, void *fndata) {
   char *s, *buf = *(char **) fndata;
   size_t curlen = buf == NULL ? 0 : strlen(buf);
-  size_t new_size = curlen + len + 1 + MJSON_DYNBUF_CHUNK;
+  size_t new_size = curlen + (size_t) len + 1 + MJSON_DYNBUF_CHUNK;
   new_size -= new_size % MJSON_DYNBUF_CHUNK;
 
   if ((s = (char *) realloc(buf, new_size)) == NULL) {
     return 0;
   } else {
-    memcpy(s + curlen, ptr, len);
-    s[curlen + len] = '\0';
+    memcpy(s + curlen, ptr, (size_t) len);
+    s[curlen + (size_t) len] = '\0';
     *(char **) fndata = s;
     return len;
   }
@@ -507,11 +505,9 @@ int mjson_print_buf(mjson_print_fn_t fn, void *fnd, const char *buf, int len) {
 }
 
 int mjson_print_long(mjson_print_fn_t fn, void *fnd, long val, int is_signed) {
-  unsigned long v = val, s = 0, n, i;
+  unsigned long v = (unsigned long) val, s = 0, n, i;
   char buf[20], t;
-  if (is_signed && val < 0) {
-    buf[s++] = '-', v = -val;
-  }
+  if (is_signed && val < 0) buf[s++] = '-', v = (unsigned long) (-val);
   // This loop prints a number in reverse order. I guess this is because we
   // write numbers from right to left: least significant digit comes last.
   // Maybe because we use Arabic numbers, and Arabs write RTL?
@@ -520,7 +516,7 @@ int mjson_print_long(mjson_print_fn_t fn, void *fnd, long val, int is_signed) {
   for (i = 0; i < n / 2; i++)
     t = buf[s + i], buf[s + i] = buf[s + n - i - 1], buf[s + n - i - 1] = t;
   if (val == 0) buf[n++] = '0';  // Handle special case
-  return fn(buf, s + n, fnd);
+  return fn(buf, (int) (s + n), fnd);
 }
 
 int mjson_print_int(mjson_print_fn_t fn, void *fnd, int v, int s) {
@@ -530,12 +526,12 @@ int mjson_print_int(mjson_print_fn_t fn, void *fnd, int v, int s) {
 static int addexp(char *buf, int e, int sign) {
   int n = 0;
   buf[n++] = 'e';
-  buf[n++] = sign;
+  buf[n++] = (char) sign;
   if (e > 400) return 0;
   if (e < 10) buf[n++] = '0';
-  if (e >= 100) buf[n++] = (e / 100) + '0', e -= 100 * (e / 100);
-  if (e >= 10) buf[n++] = (e / 10) + '0', e -= 10 * (e / 10);
-  buf[n++] = e + '0';
+  if (e >= 100) buf[n++] = (char) (e / 100) + '0', e -= 100 * (e / 100);
+  if (e >= 10) buf[n++] = (char) (e / 10) + '0', e -= 10 * (e / 10);
+  buf[n++] = (char) e + '0';
   return n;
 }
 
@@ -576,7 +572,7 @@ int mjson_print_dbl(mjson_print_fn_t fn, void *fnd, double d, int width) {
   } else {
     for (i = 0, t = mul; d >= 1.0 && s + n < (int) sizeof(buf); i++) {
       int ch = (int) (d / t);
-      if (n > 0 || ch > 0) buf[s + n++] = ch + '0';
+      if (n > 0 || ch > 0) buf[s + n++] = (char) ch + '0';
       d -= ch * t;
       t /= 10.0;
     }
@@ -587,7 +583,7 @@ int mjson_print_dbl(mjson_print_fn_t fn, void *fnd, double d, int width) {
     // printf(" 1--> [%g] -> [%.*s]\n", saved, s + n, buf);
     for (i = 0, t = 0.1; s + n < (int) sizeof(buf) && n < width; i++) {
       int ch = (int) (d / t);
-      buf[s + n++] = ch + '0';
+      buf[s + n++] = (char) ch + '0';
       d -= ch * t;
       t /= 10.0;
     }
@@ -600,7 +596,7 @@ int mjson_print_dbl(mjson_print_fn_t fn, void *fnd, double d, int width) {
 int mjson_print_str(mjson_print_fn_t fn, void *fnd, const char *s, int len) {
   int i, n = fn("\"", 1, fnd);
   for (i = 0; i < len; i++) {
-    char c = mjson_escape(s[i]);
+    char c = (char) (unsigned char) mjson_escape(s[i]);
     if (c) {
       n += fn("\\", 1, fnd);
       n += fn(&c, 1, fnd);
@@ -685,12 +681,12 @@ int mjson_vprintf(mjson_print_fn_t fn, void *fnd, const char *fmt,
 #endif
       } else if (fc == 'H') {
         const char *hex = "0123456789abcdef";
-        int i, len = va_arg(ap, int);
+        int j, len = va_arg(ap, int);
         const unsigned char *p = va_arg(ap, const unsigned char *);
         n += fn("\"", 1, fnd);
-        for (i = 0; i < len; i++) {
-          n += fn(&hex[(p[i] >> 4) & 15], 1, fnd);
-          n += fn(&hex[p[i] & 15], 1, fnd);
+        for (j = 0; j < len; j++) {
+          n += fn(&hex[(p[j] >> 4) & 15], 1, fnd);
+          n += fn(&hex[p[j] & 15], 1, fnd);
         }
         n += fn("\"", 1, fnd);
       } else if (fc == 'M') {
@@ -804,10 +800,10 @@ int mjson_merge(const char *s, int n, const char *s2, int n2,
   if (n < 2) return len;
   len += fn("{", 1, userdata);
   while ((off = mjson_next(s, n, off, &koff, &klen, &voff, &vlen, &t)) != 0) {
-    char *path = (char *) alloca(klen + 1);
+    char *path = (char *) alloca((size_t) klen + 1);
     const char *val;
     memcpy(path, "$.", 2);
-    memcpy(path + 2, s + koff + 1, klen - 2);
+    memcpy(path + 2, s + koff + 1, (size_t)(klen - 2));
     path[klen] = '\0';
     if ((t2 = mjson_find(s2, n2, path, &val, &k)) != MJSON_TOK_INVALID) {
       if (t2 == MJSON_TOK_NULL) continue;  // null deletes the key
@@ -828,11 +824,11 @@ int mjson_merge(const char *s, int n, const char *s2, int n2,
   // Add missing keys
   off = 0;
   while ((off = mjson_next(s2, n2, off, &koff, &klen, &voff, &vlen, &t)) != 0) {
-    char *path = (char *) alloca(klen + 1);
+    char *path = (char *) alloca((size_t) klen + 1);
     const char *val;
     if (t == MJSON_TOK_NULL) continue;
     memcpy(path, "$.", 2);
-    memcpy(path + 2, s2 + koff + 1, klen - 2);
+    memcpy(path + 2, s2 + koff + 1, (size_t)(klen - 2));
     path[klen] = '\0';
     if (mjson_find(s, n, path, &val, &vlen) != MJSON_TOK_INVALID) continue;
     if (comma) len += fn(",", 1, userdata);

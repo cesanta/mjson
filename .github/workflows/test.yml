@@ -21,3 +21,8 @@ jobs:
       run: make -C test vc98
     - name: vc2017
       run: make -C test vc2017
+  arm:
+    runs-on: ubuntu-latest
+    steps:
+    - name: arm
+      run: make -C test arm
