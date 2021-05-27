@@ -494,6 +494,16 @@ static void test_printf(void) {
   }
 
   {
+    char buf[100], *s = mjson_aprintf("[%d]", 123);
+    int n = mjson_snprintf(buf, sizeof(buf), "{%g}", 1.23);
+    ASSERT(s != NULL);
+    ASSERT(n == 6);
+    ASSERT(strcmp(s, "[123]") == 0);
+    ASSERT(strcmp(buf, "{1.23}") == 0);
+    free(s);
+  }
+
+  {
     char s[] = "0\n\xfeg";
     struct mjson_fixedbuf fb = {tmp, sizeof(tmp), 0};
     ASSERT(mjson_printf(&mjson_print_fixed_buf, &fb, "[%V,%V,%V,%V]", 1, s, 2,

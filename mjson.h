@@ -123,6 +123,9 @@ int mjson_print_null(const char *ptr, int len, void *userdata);
 int mjson_print_fixed_buf(const char *ptr, int len, void *userdata);
 int mjson_print_dynamic_buf(const char *ptr, int len, void *userdata);
 
+int mjson_snprintf(char *buf, size_t len, const char *fmt, ...);
+char *mjson_aprintf(const char *fmt, ...);
+
 #if MJSON_ENABLE_PRETTY
 int mjson_pretty(const char *, int, const char *, mjson_print_fn_t, void *);
 #endif

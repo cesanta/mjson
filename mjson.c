@@ -495,6 +495,24 @@ int mjson_print_dynamic_buf(const char *ptr, int len, void *fndata) {
   }
 }
 
+int mjson_snprintf(char *buf, size_t len, const char *fmt, ...) {
+  va_list ap;
+  struct mjson_fixedbuf fb = {buf, (int) len, 0};
+  va_start(ap, fmt);
+  mjson_vprintf(mjson_print_fixed_buf, &fb, fmt, &ap);
+  va_end(ap);
+  return fb.len;
+}
+
+char *mjson_aprintf(const char *fmt, ...) {
+  va_list ap;
+  char *result = NULL;
+  va_start(ap, fmt);
+  mjson_vprintf(mjson_print_dynamic_buf, &result, fmt, &ap);
+  va_end(ap);
+  return result;
+}
+
 int mjson_print_null(const char *ptr, int len, void *userdata) {
   (void) ptr;
   (void) userdata;

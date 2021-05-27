@@ -38,10 +38,9 @@ if (mjson_get_bool(s, strlen(s), "$.b[1]", &boolval)) printf("%d\n", boolval);
 
 Print into a dynamically-allocated string:
 ```c
-char *result = NULL;      // It's important to initialise it to NULL
-mjson_printf(mjson_print_dynamic_buf, &result, "{%Q:%d}", "a", (int) 123);
-printf("%s\n", result);   // {"a":123}
-free(result);             // Caller must deallocate result
+char buf[100];
+mjson_snprintf(buf, sizeof(buf), "{%Q:%d}", "a", (int) 123);
+printf("%s\n", buf);   // {"a":123}
 ```
 
 Print into some custom target, for example, a network socket:
@@ -334,6 +333,23 @@ mjson_printf(&mjson_print_dynamic_buf, &s, "{%Q:%d, %Q:%M}", "a", 1, "b", m_prin
 /* At this point `s` contains: {"a":1, "b":[1234]}  */
 free(s);
 ```
+
+## mjson_snprintf()
+
+```c
+int mjson_snprintf(char *buf, size_t len, const char *fmt, ...);
+```
+
+A convenience function that prints into a given string.
+
+## mjson_aprintf()
+
+```c
+char *mjson_aprintf(const char *fmt, ...);
+```
+
+A convenience function that prints into an allocated string. A returned
+pointer must be `free()`-ed by a caller.
 
 ## mjson_pretty()
 
