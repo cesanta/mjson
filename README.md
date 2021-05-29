@@ -18,41 +18,34 @@
 ## Parsing example
 
 ```c
-const char *s = "{\"a\":1,\"b\":[2,false]}";  // {"a":1,"b":[2,false]}
+const char *s = "{\"a\":1,\"b\":[2,false]}";    // {"a":1,"b":[2,false]}
 
-// Extract value of `a` into a variable `val` and print its value
-double val;
-if (mjson_get_number(s, strlen(s), "$.a", &val)) printf("a: %g\n", val);
+double val;                                       // Get `a` attribute
+if (mjson_get_number(s, strlen(s), "$.a", &val))  // into C variable `val`
+  printf("a: %g\n", val);                         // a: 1
 
-// Extract sub-object `b` and print it:
-const char *sub;
-int len;
-if (mjson_find(s, strlen(s), "$.b", &sub, &len)) printf("%.*s\n", len, sub);
+const char *buf;                                  // Get `b` sub-object
+int len;                                          // into C variables `buf,len`
+if (mjson_find(s, strlen(s), "$.b", &sub, &len))  // And print it
+  printf("%.*s\n", len, sub);                     // [2,false]
 
-// Extract `false`:
-int boolval;
-if (mjson_get_bool(s, strlen(s), "$.b[1]", &boolval)) printf("%d\n", boolval);
+int v;                                            // Extract `false`
+if (mjson_get_bool(s, strlen(s), "$.b[1]", &v))   // into C variable `v`
+  printf("boolean: %d\n", v);                     // boolean: 0
 ```
 
 ## Printing example
 
-Print into a dynamically-allocated string:
 ```c
-char buf[100];
-mjson_snprintf(buf, sizeof(buf), "{%Q:%d}", "a", (int) 123);
+// Print into a statically allocated buffer
+char buf[100];          
+mjson_snprintf(buf, sizeof(buf), "{%Q:%d}", "a", 123);
 printf("%s\n", buf);   // {"a":123}
-```
 
-Print into some custom target, for example, a network socket:
-```c
-// A custom "printer" function
-static int myprint(const char *buf, int len, void *userdata) {
-  int fd = * (int *) userdata;
-  return send(fd, buf, len, 0);
-}
-
-// Print into file descriptor `fd` a string `{"data":"aGkh"}`
-mjson_printf(myprint, &fd, "{%Q:%V}", "data", 3, "hi!");
+// Print into a dynamically allocated string
+char *s = mjson_snprintf(buf, sizeof(buf), "{%Q:%g}", "a", 3.1415);
+printf("%s\n", buf);    // {"a":3.1415}
+free(s);                // Don't forget to free an allocated string
 ```
 
 ## JSON-RPC example
