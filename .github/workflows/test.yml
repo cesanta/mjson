@@ -6,13 +6,13 @@ jobs:
     steps:
     - uses: actions/checkout@v2
     - name: test
-      run: make -C test
+      run: make -C test test
   macos:
     runs-on: macos-latest
     steps:
     - uses: actions/checkout@v2
     - name: make
-      run: make -C test
+      run: make -C test test
   windows:
     runs-on: ubuntu-latest
     steps:
