@@ -170,7 +170,7 @@ int mjson(const char *s, int len, mjson_cb_t cb, void *ud) {
 
 struct msjon_get_data {
   const char *path;     // Lookup json path
-  int pos;              // Current path index
+  int pos;              // Current path position
   int d1;               // Current depth of traversal
   int d2;               // Expected depth of traversal
   int i1;               // Index in an array
@@ -210,59 +210,63 @@ static int kcmp(const char *a, const char *b, int n) {
 }
 
 static int mjson_get_cb(int tok, const char *s, int off, int len, void *ud) {
-  struct msjon_get_data *data = (struct msjon_get_data *) ud;
-  // printf("--> %2x %2d %2d %2d %2d\t'%s'\t'%.*s'\t\t'%.*s'\n", tok, data->d1,
-  // data->d2, data->i1, data->i2, data->path + data->pos, off, s, len,
-  // s + off);
-  if (data->tok != MJSON_TOK_INVALID) return 1;  // Found
-
-  if (tok == '{') {
-    if (!data->path[data->pos] && data->d1 == data->d2) data->obj = off;
-    data->d1++;
-  } else if (tok == '[') {
-    if (data->d1 == data->d2 && data->path[data->pos] == '[') {
-      data->i1 = 0;
-      data->i2 = (int) mystrtod(&data->path[data->pos + 1], NULL);
-      if (data->i1 == data->i2) {
-        data->d2++;
-        data->pos += 3;
+  struct msjon_get_data *d = (struct msjon_get_data *) ud;
+#if 0
+  printf("--> %2x %2d %2d %2d %2d\t %2d %2d\t'%s' '%s' '%s' '%s'\n", tok, d->d1,
+         d->d2, d->i1, d->i2, (int) off, (int) d->pos, s, d->path, s + off,
+         d->path + d->pos);
+#endif
+  if (d->tok != MJSON_TOK_INVALID) return 1;  // Found
+  if (tok == '{' || tok == '[') {
+    d->obj = -1;
+    if (d->d1 == d->d2) d->obj = off;
+    if (d->d1 == d->d2 && tok == '[' && d->path[d->pos] == '[') {
+      d->i1 = 0;
+      d->i2 = (int) mystrtod(&d->path[d->pos + 1], NULL);
+      if (d->i1 == d->i2) {
+        while (d->path[d->pos] && d->path[d->pos] != ']') d->pos++;
+        if (d->path[d->pos] == ']') d->pos++;
+        d->d2++;
       }
     }
-    if (!data->path[data->pos] && data->d1 == data->d2) data->obj = off;
-    data->d1++;
-  } else if (tok == ',') {
-    if (data->d1 == data->d2 + 1) {
-      data->i1++;
-      if (data->i1 == data->i2) {
-        while (data->path[data->pos] != ']') data->pos++;
-        data->pos++;
-        data->d2++;
-      }
-    }
-  } else if (tok == MJSON_TOK_KEY && data->d1 == data->d2 + 1 &&
-             data->path[data->pos] == '.' && s[off] == '"' &&
-             s[off + len - 1] == '"' &&
-             plen1(&data->path[data->pos + 1]) == len - 2 &&
-             kcmp(s + off + 1, &data->path[data->pos + 1], len - 2) == 0) {
-    data->d2++;
-    data->pos += plen2(&data->path[data->pos + 1]) + 1;
-  } else if (tok == MJSON_TOK_KEY && data->d1 == data->d2) {
-    return 1;  // Exhausted path, not found
+    d->d1++;
   } else if (tok == '}' || tok == ']') {
-    data->d1--;
-    // data->d2--;
-    if (!data->path[data->pos] && data->d1 == data->d2 && data->obj != -1) {
-      data->tok = tok - 2;
-      if (data->tokptr) *data->tokptr = s + data->obj;
-      if (data->toklen) *data->toklen = off - data->obj + 1;
+    if (tok == ']' && d->d1 == d->d2) d->i1 = 0;
+    d->d1--;
+    // printf("X %s %d %d %d %d\n", d->path + d->pos, d->d1, d->d2,
+    // d->i1, d->i2);
+    if (!d->path[d->pos] && d->d1 == d->d2 && d->obj != -1) {
+      d->tok = tok - 2;
+      if (d->tokptr) *d->tokptr = s + d->obj;
+      if (d->toklen) *d->toklen = off - d->obj + 1;
       return 1;
     }
+  } else if (tok == ',' && d->d1 == d->d2 && d->pos &&
+             d->path[d->pos - 1] == ']') {
+    return 1;  // Not found in the current elem array
+  } else if (tok == ',' && d->d1 == d->d2 + 1 && d->path[d->pos] == '[') {
+    // printf("GG '%s' '%s'\n", d->path, &d->path[d->pos]);
+    d->i1++;
+    if (d->i1 == d->i2) {
+      while (d->path[d->pos] && d->path[d->pos] != ']') d->pos++;
+      if (d->path[d->pos] == ']') d->pos++;
+      d->d2++;
+    }
+  } else if (tok == MJSON_TOK_KEY && d->d1 == d->d2 + 1 &&
+             d->path[d->pos] == '.' && s[off] == '"' &&
+             s[off + len - 1] == '"' &&
+             plen1(&d->path[d->pos + 1]) == len - 2 &&
+             kcmp(s + off + 1, &d->path[d->pos + 1], len - 2) == 0) {
+    d->d2++;
+    d->pos += plen2(&d->path[d->pos + 1]) + 1;
+  } else if (tok == MJSON_TOK_KEY && d->d1 == d->d2) {
+    return 1;  // Exhausted path, not found
   } else if (MJSON_TOK_IS_VALUE(tok)) {
-    // printf("TOK --> %d\n", tok);
-    if (data->d1 == data->d2 && !data->path[data->pos]) {
-      data->tok = tok;
-      if (data->tokptr) *data->tokptr = s + off;
-      if (data->toklen) *data->toklen = len;
+    // printf("T %d %d %d %d %d\n", tok, d->d1, d->d2, d->i1, d->i2);
+    if (d->d1 == d->d2 && d->i1 == d->i2 && !d->path[d->pos]) {
+      d->tok = tok;
+      if (d->tokptr) *d->tokptr = s + off;
+      if (d->toklen) *d->toklen = len;
       return 1;
     }
   }

@@ -16,6 +16,7 @@ static int s_num_errors = 0;
     if (!(expr)) {                                           \
       s_num_errors++;                                        \
       printf("FAIL %s:%d: %s\n", __FILE__, __LINE__, #expr); \
+      exit(1);                                               \
     }                                                        \
   } while (0)
 
@@ -149,6 +150,18 @@ static void test_find(void) {
   ASSERT(mjson_find(str, (int) strlen(str), "$.\\[\\]", &p, &n) ==
          MJSON_TOK_NUMBER);
   ASSERT(n == 1 && *p == '1');
+
+  {
+    const char *s = "{\"a\":[{\"b\":1},{\"b\":2,\"c\":3}]}";
+    int len = (int) strlen(s);
+    ASSERT(mjson_find(s, len, "$.a[0].b", &p, &n) == MJSON_TOK_NUMBER);
+    ASSERT(n == 1 && *p == '1');
+    ASSERT(mjson_find(s, len, "$.a[1].b", &p, &n) == MJSON_TOK_NUMBER);
+    ASSERT(n == 1 && *p == '2');
+    ASSERT(mjson_find(s, len, "$.a[1].c", &p, &n) == MJSON_TOK_NUMBER);
+    ASSERT(n == 1 && *p == '3');
+    ASSERT(mjson_find(s, len, "$.a[0].c", &p, &n) == MJSON_TOK_INVALID);
+  }
 }
 
 // Compare two double numbers
