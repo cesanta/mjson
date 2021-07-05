@@ -816,7 +816,31 @@ static void test_globmatch(void) {
   ASSERT(mjson_globmatch("#", 1, "///", 3) == 1);
 }
 
+static void test_multiple_contexts(void) {
+  struct jsonrpc_ctx c1, c2;
+  const char *req = "{\"id\": 1, \"method\": \"rpc.list\"}";
+  const char *exp1 = "{\"id\":1,\"result\":[\"rpc.list\",\"foo\"]}\n";
+  const char *exp2 = "{\"id\":1,\"result\":[\"rpc.list\"]}\n";
+  int rl = (int) strlen(req);
+  char *r1 = NULL, *r2 = NULL;
+
+  jsonrpc_ctx_init(&c1, NULL, NULL);
+  jsonrpc_ctx_init(&c2, NULL, NULL);
+
+  jsonrpc_ctx_export(&c1, "foo", foo);
+  jsonrpc_ctx_export(&c1, MJSON_RPC_LIST_NAME, jsonrpc_list);
+  jsonrpc_ctx_export(&c2, MJSON_RPC_LIST_NAME, jsonrpc_list);
+
+  jsonrpc_ctx_process(&c1, req, rl, mjson_print_dynamic_buf, &r1, NULL);
+  jsonrpc_ctx_process(&c2, req, rl, mjson_print_dynamic_buf, &r2, NULL);
+  ASSERT(strcmp(r1, exp1) == 0);
+  ASSERT(strcmp(r2, exp2) == 0);
+  free(r1);
+  free(r2);
+}
+
 int main() {
+  test_multiple_contexts();
   test_next();
   test_printf();
   test_cb();

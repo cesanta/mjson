@@ -1046,18 +1046,20 @@ static int jsonrpc_print_methods(mjson_print_fn_t fn, void *fndata,
   return len;
 }
 
-static void rpclist(struct jsonrpc_request *r) {
+void jsonrpc_list(struct jsonrpc_request *r) {
   jsonrpc_return_success(r, "[%M]", jsonrpc_print_methods, r->ctx);
 }
 
 void jsonrpc_ctx_init(struct jsonrpc_ctx *ctx, mjson_print_fn_t response_cb,
                       void *response_cb_data) {
+  ctx->methods = NULL;
   ctx->response_cb = response_cb;
   ctx->response_cb_data = response_cb_data;
-  jsonrpc_ctx_export(ctx, MJSON_RPC_LIST_NAME, rpclist);
 }
 
 void jsonrpc_init(mjson_print_fn_t response_cb, void *userdata) {
-  jsonrpc_ctx_init(&jsonrpc_default_context, response_cb, userdata);
+  struct jsonrpc_ctx *ctx = &jsonrpc_default_context;
+  jsonrpc_ctx_init(ctx, response_cb, userdata);
+  jsonrpc_ctx_export(ctx, MJSON_RPC_LIST_NAME, jsonrpc_list);
 }
 #endif  // MJSON_ENABLE_RPC

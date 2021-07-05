@@ -102,9 +102,9 @@ int main(void) {
 - `-D MJSON_ENABLE_BASE64=0` disable base64 parsing/printing, default: enabled
 - `-D MJSON_ENABLE_RPC=0` disable RPC functionality, default: enabled
 - `-D MJSON_DYNBUF_CHUNK=256` sets the allocation granularity of `mjson_print_dynamic_buf`
-- `-D MJSON_ENABLE_PRETTY=1` enable `mjson_pretty()`, default: disabled
-- `-D MJSON_ENABLE_MERGE=1` enable `mjson_merge()`, default: disabled
-- `-D MJSON_ENABLE_NEXT=1` enable `mjson_next()`, default: disabled
+- `-D MJSON_ENABLE_PRETTY=0` disable `mjson_pretty()`, default: enabled
+- `-D MJSON_ENABLE_MERGE=0` disable `mjson_merge()`, default: enabled
+- `-D MJSON_ENABLE_NEXT=0` disable `mjson_next()`, default: enabled
 
 
 # Parsing API
@@ -236,8 +236,6 @@ int mjson_next(const char *s, int n, int off, int *koff, int *klen, int *voff,
                int *vlen, int *vtype);
 ```
 
-NOTE: to enable this function, use `-D MJSON_ENABLE_NEXT=1`.
-
 Assuming that JSON string `s`, `n` contains JSON object or JSON array,
 return the next key/value pair starting from offset `off`.
 key is returned as  `koff` (key offset), `klen` (key length), value is returned as `voff` (value offset),
@@ -351,8 +349,6 @@ int mjson_pretty(const char *s, int n, const char *pad,
                  mjson_print_fn_t fn, void *userdata);
 ```
 
-NOTE: to enable this function, use `-D MJSON_ENABLE_PRETTY=1`.
-
 Pretty-print JSON string `s`, `n` using padding `pad`. If `pad` is `""`,
 then a resulting string is terse one-line. Return length of the printed string.
 
@@ -363,8 +359,6 @@ then a resulting string is terse one-line. Return length of the printed string.
 int mjson_merge(const char *s, int n, const char *s2, int n2,
                 mjson_print_fn_t fn, void *fndata);
 ```
-
-NOTE: to enable this function, use `-D MJSON_ENABLE_MERGE=1`.
 
 Merge JSON string `s2`,`n2` into the original string `s`,`n`. Both strings
 are assumed to hold objects. The result is printed using `fn`,`fndata`.

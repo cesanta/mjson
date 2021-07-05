@@ -39,19 +39,15 @@
 #endif
 
 #ifndef MJSON_ENABLE_MERGE
-#define MJSON_ENABLE_MERGE 0
-#elif MJSON_ENABLE_MERGE
-#define MJSON_ENABLE_NEXT 1
+#define MJSON_ENABLE_MERGE 1
 #endif
 
 #ifndef MJSON_ENABLE_PRETTY
-#define MJSON_ENABLE_PRETTY 0
-#elif MJSON_ENABLE_PRETTY
-#define MJSON_ENABLE_NEXT 1
+#define MJSON_ENABLE_PRETTY 1
 #endif
 
 #ifndef MJSON_ENABLE_NEXT
-#define MJSON_ENABLE_NEXT 0
+#define MJSON_ENABLE_NEXT 1
 #endif
 
 #ifndef MJSON_RPC_LIST_NAME
@@ -188,6 +184,7 @@ void jsonrpc_ctx_process(struct jsonrpc_ctx *ctx, const char *req, int req_sz,
                          mjson_print_fn_t fn, void *fndata, void *userdata);
 
 extern struct jsonrpc_ctx jsonrpc_default_context;
+extern void jsonrpc_list(struct jsonrpc_request *r);
 
 #define jsonrpc_export(name, fn) \
   jsonrpc_ctx_export(&jsonrpc_default_context, (name), (fn))
