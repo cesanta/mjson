@@ -218,7 +218,7 @@ static int mjson_get_cb(int tok, const char *s, int off, int len, void *ud) {
 #endif
   if (d->tok != MJSON_TOK_INVALID) return 1;  // Found
   if (tok == '{' || tok == '[') {
-    d->obj = -1;
+    if (d->d1 < d->d2) d->obj = -1;
     if (d->d1 == d->d2) d->obj = off;
     if (d->d1 == d->d2 && tok == '[' && d->path[d->pos] == '[') {
       d->i1 = 0;
@@ -233,8 +233,8 @@ static int mjson_get_cb(int tok, const char *s, int off, int len, void *ud) {
   } else if (tok == '}' || tok == ']') {
     if (tok == ']' && d->d1 == d->d2) d->i1 = 0;
     d->d1--;
-    // printf("X %s %d %d %d %d\n", d->path + d->pos, d->d1, d->d2,
-    // d->i1, d->i2);
+    // printf("X %s %d %d %d %d %d\n", d->path + d->pos, d->d1, d->d2, d->i1,
+    //       d->i2, d->obj);
     if (!d->path[d->pos] && d->d1 == d->d2 && d->obj != -1) {
       d->tok = tok - 2;
       if (d->tokptr) *d->tokptr = s + d->obj;

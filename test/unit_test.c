@@ -161,6 +161,27 @@ static void test_find(void) {
     ASSERT(mjson_find(s, len, "$.a[1].c", &p, &n) == MJSON_TOK_NUMBER);
     ASSERT(n == 1 && *p == '3');
     ASSERT(mjson_find(s, len, "$.a[0].c", &p, &n) == MJSON_TOK_INVALID);
+    ASSERT(mjson_find(s, len, "$.a[0]", &p, &n) == MJSON_TOK_OBJECT);
+    ASSERT(mjson_find(s, len, "$.a", &p, &n) == MJSON_TOK_ARRAY);
+  }
+
+  {
+    const char *s = "{\"a\":[]}";
+    ASSERT(mjson_find(s, (int) strlen(s), "$.a", &p, &n) == MJSON_TOK_ARRAY);
+    s = "{\"a\":[1,2]}";
+    ASSERT(mjson_find(s, (int) strlen(s), "$.a", &p, &n) == MJSON_TOK_ARRAY);
+    s = "{\"a\":[1,[1]]}";
+    ASSERT(mjson_find(s, (int) strlen(s), "$.a", &p, &n) == MJSON_TOK_ARRAY);
+    s = "{\"a\":[[]]}";
+    ASSERT(mjson_find(s, (int) strlen(s), "$.a", &p, &n) == MJSON_TOK_ARRAY);
+    s = "{\"a\":[[1,2]]}";
+    ASSERT(mjson_find(s, (int) strlen(s), "$.a", &p, &n) == MJSON_TOK_ARRAY);
+    s = "{\"a\":{}}";
+    ASSERT(mjson_find(s, (int) strlen(s), "$.a", &p, &n) == MJSON_TOK_OBJECT);
+    s = "{\"a\":{\"a\":{}}}";
+    ASSERT(mjson_find(s, (int) strlen(s), "$.a", &p, &n) == MJSON_TOK_OBJECT);
+    s = "{\"a\":{\"a\":[]}}";
+    ASSERT(mjson_find(s, (int) strlen(s), "$.a", &p, &n) == MJSON_TOK_OBJECT);
   }
 }
 

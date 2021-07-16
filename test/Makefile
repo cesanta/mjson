@@ -21,7 +21,7 @@ all: test linux arm vc98 vc2017
 test: ../src/mjson.h ../src/mjson.c unit_test.c
 	$(CC) ../src/mjson.c unit_test.c $(CFLAGS) $(EXTRA) -o unit_test && $(DEBUGGER) ./unit_test
 	$(CXX) -g -x c++ ../src/mjson.c unit_test.c $(CFLAGS) -o unit_test && $(DEBUGGER) ./unit_test
-	@test "$(GCOVCMD)" == true || $(GCOVCMD)
+	@test -z "$(GCOVCMD)" || $(GCOVCMD)
 
 linux: test
 linux: CFLAGS += -O2 -fsanitize=address,undefined,shift,null,return,bounds,alignment,object-size,bool,enum -static-libasan
