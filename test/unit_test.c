@@ -467,6 +467,10 @@ static void test_printf(void) {
   TESTDOUBLE("%.*g", DBLWIDTH(10, 0.123456333), "0.123456333");
   TESTDOUBLE("%g", 123.456222, "123.456");
   TESTDOUBLE("%.*g", DBLWIDTH(10, 123.456222), "123.456222");
+  TESTDOUBLE("%g", 600.1234, "600.123");
+  TESTDOUBLE("%g", -600.1234, "-600.123");
+  TESTDOUBLE("%g", 599.1234, "599.123");
+  TESTDOUBLE("%g", -599.1234, "-599.123");
 
 #ifndef _WIN32
   TESTDOUBLE("%g", (double) INFINITY, "inf");
