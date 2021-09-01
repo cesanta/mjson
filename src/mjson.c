@@ -593,7 +593,7 @@ int mjson_print_dbl(mjson_print_fn_t fn, void *fnd, double d, int width) {
     n += addexp(buf + s + n, -e, '-');
     return fn(buf, s + n, fnd);
   } else {
-    for (i = 0, t = mul; d >= 1.0 && s + n < (int) sizeof(buf); i++) {
+    for (i = 0, t = mul; t >= 1.0 && s + n < (int) sizeof(buf); i++) {
       int ch = (int) (d / t);
       if (n > 0 || ch > 0) buf[s + n++] = (char) (ch + '0');
       d -= ch * t;
