@@ -18,34 +18,34 @@
 ## Parsing example
 
 ```c
-const char *s = "{\"a\":1,\"b\":[2,false]}";    // {"a":1,"b":[2,false]}
+const char *s = "{\"a\":1,\"b\":[2,false]}";  // {"a":1,"b":[2,false]}
 
 double val;                                       // Get `a` attribute
 if (mjson_get_number(s, strlen(s), "$.a", &val))  // into C variable `val`
   printf("a: %g\n", val);                         // a: 1
 
-const char *buf;                                  // Get `b` sub-object
-int len;                                          // into C variables `buf,len`
-if (mjson_find(s, strlen(s), "$.b", &sub, &len))  // And print it
-  printf("%.*s\n", len, sub);                     // [2,false]
+const char *buf;  // Get `b` sub-object
+int len;          // into C variables `buf,len`
+if (mjson_find(s, strlen(s), "$.b", &buf, &len))  // And print it
+  printf("%.*s\n", len, buf);                     // [2,false]
 
-int v;                                            // Extract `false`
-if (mjson_get_bool(s, strlen(s), "$.b[1]", &v))   // into C variable `v`
-  printf("boolean: %d\n", v);                     // boolean: 0
+int v;                                           // Extract `false`
+if (mjson_get_bool(s, strlen(s), "$.b[1]", &v))  // into C variable `v`
+  printf("boolean: %d\n", v);                    // boolean: 0
 ```
 
 ## Printing example
 
 ```c
 // Print into a statically allocated buffer
-char buf[100];          
+char buf[100];
 mjson_snprintf(buf, sizeof(buf), "{%Q:%d}", "a", 123);
-printf("%s\n", buf);   // {"a":123}
+printf("%s\n", buf);  // {"a":123}
 
 // Print into a dynamically allocated string
-char *s = mjson_snprintf(buf, sizeof(buf), "{%Q:%g}", "a", 3.1415);
-printf("%s\n", buf);    // {"a":3.1415}
-free(s);                // Don't forget to free an allocated string
+char *s = mjson_aprintf("{%Q:%g}", "a", 3.1415);
+printf("%s\n", s);  // {"a":3.1415}
+free(s);            // Don't forget to free an allocated string
 ```
 
 ## JSON-RPC example
@@ -87,8 +87,8 @@ int main(void) {
 
   // Register our own function
   char request3[] = "{\"id\": 2, \"method\": \"foo\",\"params\":[0,1.23]}";
-  jsonrpc_export("foo", foo, (void *) "hi");
-  jsonrpc_process(request3, strlen(request3), sender, NULL, NULL);
+  jsonrpc_export("foo", foo);
+  jsonrpc_process(request3, strlen(request3), sender, NULL, (void *) "hi!");
 
   return 0;
 }
@@ -419,7 +419,7 @@ NOTE: a `name` is a glob pattern that follows these rules:
 - `#` matches 0 or more characters
 - any other character matches itself
 
-For example, after `jsonrpc_export("Foo.*", my_func, my_data);`,
+For example, after `jsonrpc_export("Foo.*", my_func);`,
 the server triggers `my_func` on `Foo.Bar`, `Foo.Baz`, etc.
 
 ## struct jsonrpc_request
@@ -487,9 +487,9 @@ static void sum(struct jsonrpc_request *r) {
 }
 
 void setup() {
-  jsonrpc_init(NULL, NULL);   // Initialise the library
-  jsonrpc_export("Sum", sum, NULL);   // Export "Sum" function
-  Serial.begin(115200);               // Setup serial port
+  jsonrpc_init(NULL, NULL);     // Initialise the library
+  jsonrpc_export("Sum", sum);   // Export "Sum" function
+  Serial.begin(115200);         // Setup serial port
 }
 
 static void handle_serial_input(unsigned char ch) {
