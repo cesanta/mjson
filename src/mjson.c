@@ -489,7 +489,7 @@ int mjson_print_dynamic_buf(const char *ptr, int len, void *fndata) {
   size_t new_size = curlen + (size_t) len + 1 + MJSON_DYNBUF_CHUNK;
   new_size -= new_size % MJSON_DYNBUF_CHUNK;
 
-  if ((s = (char *) realloc(buf, new_size)) == NULL) {
+  if ((s = (char *) MJSON_REALLOC(buf, new_size)) == NULL) {
     return 0;
   } else {
     memcpy(s + curlen, ptr, (size_t) len);

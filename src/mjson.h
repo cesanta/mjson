@@ -58,6 +58,10 @@
 #define MJSON_DYNBUF_CHUNK 256  // Allocation granularity for print_dynamic_buf
 #endif
 
+#ifndef MJSON_REALLOC
+#define MJSON_REALLOC realloc
+#endif
+
 #ifdef __cplusplus
 extern "C" {
 #endif

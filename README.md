@@ -105,6 +105,7 @@ int main(void) {
 - `-D MJSON_ENABLE_PRETTY=0` disable `mjson_pretty()`, default: enabled
 - `-D MJSON_ENABLE_MERGE=0` disable `mjson_merge()`, default: enabled
 - `-D MJSON_ENABLE_NEXT=0` disable `mjson_next()`, default: enabled
+- `-D MJSON_REALLOC=my_realloc` redefine realloc() used by `mjson_print_dynamic_buf()`, default: realloc
 
 
 # Parsing API
