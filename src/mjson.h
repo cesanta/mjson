@@ -60,6 +60,8 @@
 
 #ifndef MJSON_REALLOC
 #define MJSON_REALLOC realloc
+#else
+extern void *MJSON_REALLOC(void *ptr, size_t size);
 #endif
 
 #ifdef __cplusplus
