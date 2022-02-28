@@ -1,5 +1,5 @@
 DEFS = -DMJSON_ENABLE_MERGE=1 -DMJSON_ENABLE_PRETTY=1
-WARN ?= -W -Wall -Werror -Wshadow -Wdouble-promotion -fno-common -Wconversion
+WARN ?= -W -Wall -Wextra -Werror -Wshadow -Wdouble-promotion -fno-common -Wconversion
 CFLAGS ?= $(WARN) -g3 -Os -I../src $(DEFS)
 GCOVCMD ?= true
 PDIR ?= $(realpath $(CURDIR)/..)
