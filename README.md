@@ -113,8 +113,7 @@ int main(void) {
 ## mjson_find()
 
 ```c
-enum mjson_tok mjson_find(const char *s, int len, const char *path,
-                          const char **tokptr, int *toklen);
+int mjson_find(const char *s, int len, const char *path, const char **tokptr, int *toklen);
 ```
 
 In a JSON string `s`, `len`, find an element by its JSONPATH `path`.
