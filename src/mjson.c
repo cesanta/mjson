@@ -304,8 +304,8 @@ static unsigned char unhex(unsigned char c) {
 }
 
 static unsigned char mjson_unhex_nimble(const char *s) {
-  return (unsigned char) (unhex(((unsigned char *) s)[0]) << 4) |
-         unhex(((unsigned char *) s)[1]);
+  unsigned char *u = (unsigned char *) s;
+  return (unsigned char) (((unsigned char) (unhex(u[0]) << 4)) | unhex(u[1]));
 }
 
 static int mjson_unescape(const char *s, int len, char *to, int n) {
