@@ -21,9 +21,15 @@ jobs:
       run: make -C test vc98
     - name: vc2017
       run: make -C test vc2017
+    - name: vc22
+      run: make -C test vc22
+    - name: mingw
+      run: make -C test mingw
   arm:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v2
     - name: arm
       run: make -C test arm
+    - name: armlinux
+      run: make -C test armlinux
