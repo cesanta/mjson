@@ -31,5 +31,3 @@ jobs:
     - uses: actions/checkout@v2
     - name: arm
       run: make -C test arm
-    - name: armlinux
-      run: make -C test armlinux
