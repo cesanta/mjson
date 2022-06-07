@@ -571,6 +571,13 @@ static void test_printf(void) {
     ASSERT(mjson_printf(&mjson_print_fixed_buf, &fb, "%Q", "a/b\nc") == 8);
     ASSERT(strcmp(tmp, s) == 0);
   }
+
+  {
+    char buf[100];
+    ASSERT(mjson_snprintf(buf, sizeof(buf), "[%M, %d, %M, %d]", f1, 123, 42, f1,
+                          321, 24) > 0);
+    ASSERT(strcmp(buf, "[[123], 42, [321], 24]") == 0);
+  }
 }
 
 static void foo(struct jsonrpc_request *r) {
