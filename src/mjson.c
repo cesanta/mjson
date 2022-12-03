@@ -26,6 +26,8 @@
 
 #if defined(_MSC_VER)
 #define alloca(x) _alloca(x)
+#else
+#include <alloca.h>
 #endif
 
 #if defined(_MSC_VER) && _MSC_VER < 1700
@@ -106,6 +108,9 @@ int mjson(const char *s, int len, mjson_cb_t cb, void *ud) {
         } else if (c == 'n' && i + 3 < len && memcmp(&s[i], "null", 4) == 0) {
           i += 3;
           tok = MJSON_TOK_NULL;
+        } else if (c == 'd' && i + 2 < len && memcmp(&s[i], "del", 3) == 0) {
+          i += 2;
+          tok = MJSON_TOK_DEL;
         } else if (c == 'f' && i + 4 < len && memcmp(&s[i], "false", 5) == 0) {
           i += 4;
           tok = MJSON_TOK_FALSE;
@@ -827,7 +832,7 @@ int mjson_merge(const char *s, int n, const char *s2, int n2,
     memcpy(path + 2, s + koff + 1, (size_t) (klen - 2));
     path[klen] = '\0';
     if ((t2 = mjson_find(s2, n2, path, &val, &k)) != MJSON_TOK_INVALID) {
-      if (t2 == MJSON_TOK_NULL) continue;  // null deletes the key
+      if (t2 == MJSON_TOK_DEL) continue;  // "del" deletes the key
     } else {
       val = s + voff;  // Key is not found in the update. Copy the old value.
     }
@@ -847,7 +852,7 @@ int mjson_merge(const char *s, int n, const char *s2, int n2,
   while ((off = mjson_next(s2, n2, off, &koff, &klen, &voff, &vlen, &t)) != 0) {
     char *path = (char *) alloca((size_t) klen + 1);
     const char *val;
-    if (t == MJSON_TOK_NULL) continue;
+    if (t == MJSON_TOK_DEL) continue;
     memcpy(path, "$.", 2);
     memcpy(path + 2, s2 + koff + 1, (size_t) (klen - 2));
     path[klen] = '\0';
