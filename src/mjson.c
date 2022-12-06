@@ -191,11 +191,31 @@ static int plen1(const char *s) {
   return n;
 }
 
+/* 
+ * This function calculates the position of the `.`
+ * when the json key have a `.` in the key name
+ * 
+ * Input:  the json key
+ * Output: the position after the `.`
+ */
 static int plen2(const char *s) {
-  int i = 0, n = 0;
-  while (s[i] != '\0' && s[i] != '.' && s[i] != '[')
-    n++, i += s[i] == '\\' ? 2 : 1;
-  // printf("PLEN: s: [%s], [%.*s] => %d\n", s, i, s, n);
+  int i = 0;
+
+#if MJSON_DEBUG
+  int n = 0;
+#endif
+
+  while (s[i] != '\0' && s[i] != '.' && s[i] != '['){
+    i += s[i] == '\\' ? 2 : 1;
+#if MJSON_DEBUG
+    n++;
+#endif
+  }
+
+#if MJSON_DEBUG
+  printf("PLEN2: s: [%s], [%.*s] => %d\n", s, i, s, n);
+#endif
+
   return i;
 }
 
