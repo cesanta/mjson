@@ -75,6 +75,7 @@ extern "C" {
 #define MJSON_TOK_TRUE 13
 #define MJSON_TOK_FALSE 14
 #define MJSON_TOK_NULL 15
+#define MJSON_TOK_DEL 16
 #define MJSON_TOK_ARRAY 91
 #define MJSON_TOK_OBJECT 123
 #define MJSON_TOK_IS_VALUE(t) ((t) > 10 && (t) < 20)
