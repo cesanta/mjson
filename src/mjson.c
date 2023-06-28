@@ -821,7 +821,7 @@ int mjson_merge(const char *s, int n, const char *s2, int n2,
   if (n < 2) return len;
   len += fn("{", 1, userdata);
   while ((off = mjson_next(s, n, off, &koff, &klen, &voff, &vlen, &t)) != 0) {
-    char *path = (char *) alloca((size_t) klen + 1);
+    char *path = (char *) malloc((size_t) klen + 1);
     const char *val;
     memcpy(path, "$.", 2);
     memcpy(path + 2, s + koff + 1, (size_t) (klen - 2));
@@ -841,11 +841,12 @@ int mjson_merge(const char *s, int n, const char *s2, int n2,
       len += fn(val, vlen, userdata);
     }
     comma = 1;
+    free(path);
   }
   // Add missing keys
   off = 0;
   while ((off = mjson_next(s2, n2, off, &koff, &klen, &voff, &vlen, &t)) != 0) {
-    char *path = (char *) alloca((size_t) klen + 1);
+    char *path = (char *) malloc((size_t) klen + 1);
     const char *val;
     if (t == MJSON_TOK_NULL) continue;
     memcpy(path, "$.", 2);
@@ -857,6 +858,7 @@ int mjson_merge(const char *s, int n, const char *s2, int n2,
     len += fn(":", 1, userdata);
     len += fn(s2 + voff, vlen, userdata);
     comma = 1;
+    free(path);
   }
   len += fn("}", 1, userdata);
   return len;
