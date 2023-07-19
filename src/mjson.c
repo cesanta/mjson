@@ -24,6 +24,10 @@
 
 #include "mjson.h"
 
+#if defined(NRF52)
+#include <sdk_alloca.h>
+#endif
+
 #if defined(_MSC_VER)
 #define alloca(x) _alloca(x)
 #endif
