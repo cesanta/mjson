@@ -26,6 +26,8 @@
 
 #if defined(_MSC_VER)
 #define alloca(x) _alloca(x)
+#else
+#include <alloca.h>
 #endif
 
 #if defined(_MSC_VER) && _MSC_VER < 1700
