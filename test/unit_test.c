@@ -340,6 +340,13 @@ static void test_get_string(void) {
     ASSERT(mjson_get_string(s, (int) strlen(s), "$[2]", buf, sizeof(buf)) > 0);
     ASSERT(strcmp(buf, expected) == 0);
   }
+
+  {
+    const char *s = "{\"url\":\"https:\\/\\/example.org\\/\"}";
+    const char *expected = "https://example.org/";
+    ASSERT(mjson_get_string(s, (int) strlen(s), "$.url", buf, sizeof(buf)) == 20);
+    ASSERT(strcmp(buf, expected) == 0);
+  }
 }
 
 static void test_print(void) {
