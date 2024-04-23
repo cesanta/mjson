@@ -688,6 +688,31 @@ static void test_rpc(void) {
   fb.len = 0;
   jsonrpc_process(req, (int) strlen(req), mjson_print_fixed_buf, &fb, NULL);
   ASSERT(strcmp(buf, res) == 0);
+
+  // Test jsonrpc 2.0 success
+  req = "{\"jsonrpc\":\"2.0\",\"id\": 2, \"method\": \"foo\",\"params\":[0,1.23]}\n";
+  res = "{\"id\":2,\"result\":{\"x\":1.23,\"ud\":\"hi\"},\"jsonrpc\":\"2.0\"}\n";
+  fb.len = 0;
+  jsonrpc_process(req, (int) strlen(req), mjson_print_fixed_buf, &fb,
+                  (void *) "hi");
+  ASSERT(strcmp(buf, res) == 0);
+
+  // Test jsonrpc 2.0 error
+  req = "{\"jsonrpc\":\"2.0\",\"id\": 3, \"method\": \"foo1\",\"params\":[1,true]}\n";
+  res = "{\"id\":3,\"error\":{\"code\":123,\"message\":\"\"},\"jsonrpc\":\"2.0\"}\n";
+  fb.len = 0;
+  jsonrpc_process(req, (int) strlen(req), mjson_print_fixed_buf, &fb, NULL);
+  ASSERT(strcmp(buf, res) == 0);
+
+  // Test jsonrpc 2.0 wrong value
+  req = "{\"jsonrpc\":\"1.0\",\"id\": 2, \"method\": \"foo\",\"params\":[0,1.23]}\n";
+  res = "{\"jsonrpc\":\"2.0\",\"id\":2,\"error\":{\"code\":-32600,\"message\":\""
+                "Value of jsonrpc must be the string 2.0\"}}\n";
+  fb.len = 0;
+  jsonrpc_process(req, (int) strlen(req), mjson_print_fixed_buf, &fb,
+                  (void *) "hi");
+  ASSERT(strcmp(buf, res) == 0);
+
 }
 
 static void test_merge(void) {
