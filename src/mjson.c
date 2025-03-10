@@ -998,9 +998,19 @@ void jsonrpc_return_success(struct jsonrpc_request *r, const char *result_fmt,
 void jsonrpc_ctx_process(struct jsonrpc_ctx *ctx, const char *buf, int len,
                          mjson_print_fn_t fn, void *fn_data, void *ud) {
   const char *result = NULL, *error = NULL;
-  int result_sz = 0, error_sz = 0;
+  int result_sz = 0, error_sz = 0, id_tok = MJSON_TOK_INVALID, 
+    params_tok = MJSON_TOK_INVALID;
   struct jsonrpc_method *m = NULL;
   struct jsonrpc_request r = {ctx, buf, len, 0, 0, 0, 0, 0, 0, fn, fn_data, ud};
+
+  // Request must be a valid object
+  if (mjson_find(buf, len, "$", &r.method, &r.method_len) !=
+      MJSON_TOK_OBJECT) {
+    mjson_printf(fn, fn_data,
+                 "{\"error\":{\"code\":%d,\"message\":%Q},\"id\":null}\n",
+                 JSONRPC_ERROR_PARSE, JSONRPC_ERROR_MSG_PARSE);
+    return;
+  }
 
   // Is is a response frame?
   mjson_find(buf, len, "$.result", &result, &result_sz);
@@ -1010,17 +1020,48 @@ void jsonrpc_ctx_process(struct jsonrpc_ctx *ctx, const char *buf, int len,
     return;
   }
 
-  // Method must exist and must be a string
-  if (mjson_find(buf, len, "$.method", &r.method, &r.method_len) !=
-      MJSON_TOK_STRING) {
+  // id is optional
+  id_tok = mjson_find(buf, len, "$.id", &r.id, &r.id_len);
+  // id (if exists) must be a number, string or null
+  if (id_tok != MJSON_TOK_INVALID && id_tok != MJSON_TOK_NUMBER &&
+      id_tok != MJSON_TOK_STRING && id_tok != MJSON_TOK_NULL) {
     mjson_printf(fn, fn_data,
-                 "{\"error\":{\"code\":-32700,\"message\":%.*Q}}\n", len, buf);
+                 "{\"error\":{\"code\":%d,\"message\":%Q},\"id\":null}\n",
+                 JSONRPC_ERROR_BAD_REQUEST, JSONRPC_ERROR_MSG_BAD_REQUEST);
     return;
   }
 
-  // id and params are optional
-  mjson_find(buf, len, "$.id", &r.id, &r.id_len);
-  mjson_find(buf, len, "$.params", &r.params, &r.params_len);
+  // Method must exist and must be a string
+  if (mjson_find(buf, len, "$.method", &r.method, &r.method_len) !=
+      MJSON_TOK_STRING) {
+    // use null as id if it is not present
+    if(id_tok == MJSON_TOK_INVALID){
+      mjson_printf(fn, fn_data,
+                   "{\"error\":{\"code\":%d,\"message\":%Q},\"id\":null}\n", 
+                   JSONRPC_ERROR_BAD_REQUEST, JSONRPC_ERROR_MSG_BAD_REQUEST);
+      return;
+    }
+    jsonrpc_return_error(&r, JSONRPC_ERROR_BAD_REQUEST, 
+                         JSONRPC_ERROR_MSG_BAD_REQUEST, NULL);
+    return;
+  }
+
+  // params are optional
+  params_tok = mjson_find(buf, len, "$.params", &r.params, &r.params_len);
+  // params (if exists) must be an object or an array
+  if (params_tok != MJSON_TOK_INVALID && params_tok != MJSON_TOK_OBJECT &&
+      params_tok != MJSON_TOK_ARRAY) {
+    // use null as id if it is not present
+    if(id_tok == MJSON_TOK_INVALID){
+      mjson_printf(fn, fn_data,
+                   "{\"error\":{\"code\":%d,\"message\":%Q},\"id\":null}\n", 
+                   JSONRPC_ERROR_BAD_REQUEST, JSONRPC_ERROR_MSG_BAD_REQUEST);
+      return;
+    }
+    jsonrpc_return_error(&r, JSONRPC_ERROR_BAD_REQUEST, 
+                         JSONRPC_ERROR_MSG_BAD_REQUEST, NULL);
+    return;
+  }
 
   for (m = ctx->methods; m != NULL; m = m->next) {
     if (mjson_globmatch(m->method, m->method_sz, r.method + 1,
@@ -1031,7 +1072,8 @@ void jsonrpc_ctx_process(struct jsonrpc_ctx *ctx, const char *buf, int len,
     }
   }
   if (m == NULL) {
-    jsonrpc_return_error(&r, JSONRPC_ERROR_NOT_FOUND, "method not found", NULL);
+    jsonrpc_return_error(&r, JSONRPC_ERROR_METHOD_NOT_FOUND, 
+                         JSONRPC_ERROR_MSG_METHOD_NOT_FOUND, NULL);
   }
 }
 

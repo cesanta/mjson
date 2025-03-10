@@ -616,15 +616,26 @@ static void test_rpc(void) {
   res = "{\"id\":1,\"result\":[\"rpc.list\"]}\n";
   fb.len = 0;
   jsonrpc_process(req, (int) strlen(req), mjson_print_fixed_buf, &fb, NULL);
+  ASSERT(fb.len > 0);
   ASSERT(strcmp(buf, res) == 0);
 
   // Call non-existent method
   req = "{\"id\": 1, \"method\": \"foo\"}\n";
   res =
-      "{\"id\":1,\"error\":{\"code\":-32601,\"message\":\"method not "
+      "{\"id\":1,\"error\":{\"code\":-32601,\"message\":\"Method not "
       "found\"}}\n";
   fb.len = 0;
   jsonrpc_process(req, (int) strlen(req), mjson_print_fixed_buf, &fb, NULL);
+  ASSERT(fb.len > 0);
+  ASSERT(strcmp(buf, res) == 0);
+
+  // Test for bad method
+  req = "{\"id\": 1, \"method\": 123}\n";
+  res = "{\"id\":1,\"error\":{\"code\":-32600,\"message\":\"Invalid "
+        "Request\"}}\n";
+  fb.len = 0;
+  jsonrpc_process(req, (int) strlen(req), mjson_print_fixed_buf, &fb, NULL);
+  ASSERT(fb.len > 0);
   ASSERT(strcmp(buf, res) == 0);
 
   // Register our own function
@@ -634,13 +645,97 @@ static void test_rpc(void) {
   jsonrpc_export("foo", foo);
   jsonrpc_process(req, (int) strlen(req), mjson_print_fixed_buf, &fb,
                   (void *) "hi");
+  ASSERT(fb.len > 0);
   ASSERT(strcmp(buf, res) == 0);
 
   // Test for bad frame
   req = "boo\n";
-  res = "{\"error\":{\"code\":-32700,\"message\":\"boo\\n\"}}\n";
+  res = "{\"error\":{\"code\":-32700,\"message\":\"Parse error\"},"
+        "\"id\":null}\n";
   fb.len = 0;
   jsonrpc_process(req, (int) strlen(req), mjson_print_fixed_buf, &fb, NULL);
+  ASSERT(fb.len > 0);
+  ASSERT(strcmp(buf, res) == 0);
+
+  // Test for bad request: id is array
+  req = "{\"id\": [2], \"method\": \"baz\"}\n";
+  res = "{\"error\":{\"code\":-32600,\"message\":\"Invalid Request\"},"
+        "\"id\":null}\n";
+  fb.len = 0;
+  jsonrpc_process(req, (int) strlen(req), mjson_print_fixed_buf, &fb, NULL);
+  ASSERT(fb.len > 0);
+  ASSERT(strcmp(buf, res) == 0);
+
+  // Test for bad request: id is object
+  req = "{\"id\": {\"a\":2}, \"method\": \"baz\"}\n";
+  res = "{\"error\":{\"code\":-32600,\"message\":\"Invalid Request\"},"
+        "\"id\":null}\n";
+  fb.len = 0;
+  jsonrpc_process(req, (int) strlen(req), mjson_print_fixed_buf, &fb, NULL);
+  ASSERT(fb.len > 0);
+  ASSERT(strcmp(buf, res) == 0);
+
+  // Test for bad request: id is boolean
+  req = "{\"id\":true, \"method\": \"baz\"}\n";
+  res = "{\"error\":{\"code\":-32600,\"message\":\"Invalid Request\"},"
+        "\"id\":null}\n";
+  fb.len = 0;
+  jsonrpc_process(req, (int) strlen(req), mjson_print_fixed_buf, &fb, NULL);
+  ASSERT(fb.len > 0);
+  ASSERT(strcmp(buf, res) == 0);
+
+  // Test for bad request: params is number
+  req = "{\"id\": 1, \"method\": \"foo\", \"params\": 1}\n";
+  res = "{\"id\":1,\"error\":{\"code\":-32600,\"message\":\"Invalid "
+        "Request\"}}\n";
+  fb.len = 0;
+  jsonrpc_process(req, (int) strlen(req), mjson_print_fixed_buf, &fb, NULL);
+  ASSERT(fb.len > 0);
+  ASSERT(strcmp(buf, res) == 0);
+
+  // Test for bad request: params is string
+  req = "{\"id\": 1, \"method\": \"foo\", \"params\": \"bar\"}\n";
+  res = "{\"id\":1,\"error\":{\"code\":-32600,\"message\":\"Invalid "
+        "Request\"}}\n";
+  fb.len = 0;
+  jsonrpc_process(req, (int) strlen(req), mjson_print_fixed_buf, &fb, NULL);
+  ASSERT(fb.len > 0);
+  ASSERT(strcmp(buf, res) == 0);
+
+  // Test for bad request: params is boolean
+  req = "{\"id\": 1, \"method\": \"foo\", \"params\": true}\n";
+  res = "{\"id\":1,\"error\":{\"code\":-32600,\"message\":\"Invalid "
+        "Request\"}}\n";
+  fb.len = 0;
+  jsonrpc_process(req, (int) strlen(req), mjson_print_fixed_buf, &fb, NULL);
+  ASSERT(fb.len > 0);
+  ASSERT(strcmp(buf, res) == 0);
+
+  // Test for bad notification: params is number
+  req = "{\"method\": \"foo\", \"params\": 1}\n";
+  res = "{\"error\":{\"code\":-32600,\"message\":\"Invalid Request\"},"
+        "\"id\":null}\n";
+  fb.len = 0;
+  jsonrpc_process(req, (int) strlen(req), mjson_print_fixed_buf, &fb, NULL);
+  ASSERT(fb.len > 0);
+  ASSERT(strcmp(buf, res) == 0);
+
+  // Test for bad notification: params is string
+  req = "{\"method\": \"foo\", \"params\": \"bar\"}\n";
+  res = "{\"error\":{\"code\":-32600,\"message\":\"Invalid Request\"},"
+        "\"id\":null}\n";
+  fb.len = 0;
+  jsonrpc_process(req, (int) strlen(req), mjson_print_fixed_buf, &fb, NULL);
+  ASSERT(fb.len > 0);
+  ASSERT(strcmp(buf, res) == 0);
+
+  // Test for bad notification: params is boolean
+  req = "{\"method\": \"foo\", \"params\": true}\n";
+  res = "{\"error\":{\"code\":-32600,\"message\":\"Invalid Request\"},"
+        "\"id\":null}\n";
+  fb.len = 0;
+  jsonrpc_process(req, (int) strlen(req), mjson_print_fixed_buf, &fb, NULL);
+  ASSERT(fb.len > 0);
   ASSERT(strcmp(buf, res) == 0);
 
   // Test simple error response, without data
@@ -649,6 +744,7 @@ static void test_rpc(void) {
   jsonrpc_export("foo1", foo1);
   fb.len = 0;
   jsonrpc_process(req, (int) strlen(req), mjson_print_fixed_buf, &fb, NULL);
+  ASSERT(fb.len > 0);
   ASSERT(strcmp(buf, res) == 0);
 
   // Test more complex error response, with data
@@ -659,6 +755,7 @@ static void test_rpc(void) {
   jsonrpc_export("foo2", foo2);
   fb.len = 0;
   jsonrpc_process(req, (int) strlen(req), mjson_print_fixed_buf, &fb, NULL);
+  ASSERT(fb.len > 0);
   ASSERT(strcmp(buf, res) == 0);
 
   // Test notify - must not generate a response
@@ -672,6 +769,7 @@ static void test_rpc(void) {
   res = ">>{\"id\":123,\"result\":[1,2,3]}<<";
   fb.len = 0;
   jsonrpc_process(req, (int) strlen(req), mjson_print_fixed_buf, &fb, NULL);
+  ASSERT(fb.len > 0);
   ASSERT(strcmp(buf, res) == 0);
 
   // Test error response
@@ -679,6 +777,7 @@ static void test_rpc(void) {
   res = ">>{\"id\":566,\"error\":{}}<<";
   fb.len = 0;
   jsonrpc_process(req, (int) strlen(req), mjson_print_fixed_buf, &fb, NULL);
+  ASSERT(fb.len > 0);
   ASSERT(strcmp(buf, res) == 0);
 
   // Test glob pattern in the RPC function name
@@ -687,6 +786,7 @@ static void test_rpc(void) {
   jsonrpc_export("Bar.*", foo3);
   fb.len = 0;
   jsonrpc_process(req, (int) strlen(req), mjson_print_fixed_buf, &fb, NULL);
+  ASSERT(fb.len > 0);
   ASSERT(strcmp(buf, res) == 0);
 }
 

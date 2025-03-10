@@ -208,10 +208,17 @@ extern void jsonrpc_list(struct jsonrpc_request *r);
 #define jsonrpc_process(buf, len, fn, fnd, ud) \
   jsonrpc_ctx_process(&jsonrpc_default_context, (buf), (len), (fn), (fnd), (ud))
 
-#define JSONRPC_ERROR_INVALID -32700    /* Invalid JSON was received */
-#define JSONRPC_ERROR_NOT_FOUND -32601  /* The method does not exist */
-#define JSONRPC_ERROR_BAD_PARAMS -32602 /* Invalid params passed */
-#define JSONRPC_ERROR_INTERNAL -32603   /* Internal JSON-RPC error */
+#define JSONRPC_ERROR_PARSE -32700            /* Invalid JSON was received */
+#define JSONRPC_ERROR_BAD_REQUEST -32600      /* The JSON sent is not a valid Request object */
+#define JSONRPC_ERROR_METHOD_NOT_FOUND -32601 /* The method does not exist or is not available*/
+#define JSONRPC_ERROR_BAD_PARAMS -32602       /* Invalid method parameter(s) */
+#define JSONRPC_ERROR_INTERNAL -32603         /* Internal JSON-RPC error */
+
+#define JSONRPC_ERROR_MSG_PARSE "Parse error"
+#define JSONRPC_ERROR_MSG_BAD_REQUEST "Invalid Request"
+#define JSONRPC_ERROR_MSG_METHOD_NOT_FOUND "Method not found"
+#define JSONRPC_ERROR_MSG_BAD_PARAMS "Invalid params"
+#define JSONRPC_ERROR_MSG_INTERNAL "Internal error"
 
 #endif  // MJSON_ENABLE_RPC
 #ifdef __cplusplus
