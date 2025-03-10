@@ -318,6 +318,13 @@ static int mjson_unescape(const char *s, int len, char *to, int n) {
       if (s[i + 2] != '0' || s[i + 3] != '0') return -1;  // Too much, give up
       ((unsigned char *) to)[j] = mjson_unhex_nimble(s + i + 4);
       i += 5;
+    } else if (s[i] == '\\' && i + 1 < len && s[i + 1] == '/') {
+      // Any character may be escaped in a string. This takes care of escaped
+      // slashes only to minimize added complexity while supporting PHP's
+      // default json encoding format, as that escapes forward slashes by
+      // default.
+      to[j] = '/';
+      i++;
     } else if (s[i] == '\\' && i + 1 < len) {
       int c = mjson_esc(s[i + 1], 0);
       if (c == 0) return -1;
