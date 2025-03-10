@@ -165,6 +165,7 @@ struct jsonrpc_request {
   mjson_print_fn_t fn;  // Printer function
   void *fn_data;        // Printer function data
   void *userdata;       // Callback's user data as specified at export time
+  int jsonrpc_2;        // Indicates if this is a jsonrpc 2.0 request or not
 };
 
 struct jsonrpc_method {

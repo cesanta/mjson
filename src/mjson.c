@@ -964,7 +964,12 @@ void jsonrpc_return_errorv(struct jsonrpc_request *r, int code,
     mjson_printf(r->fn, r->fn_data, ",\"data\":");
     mjson_vprintf(r->fn, r->fn_data, data_fmt, ap);
   }
-  mjson_printf(r->fn, r->fn_data, "}}\n");
+  if (r->jsonrpc_2) {
+    mjson_printf(r->fn, r->fn_data, "%s", "},\"jsonrpc\":\"2.0\"}\n");
+  }
+  else {
+    mjson_printf(r->fn, r->fn_data, "}}\n");
+  }
 }
 
 void jsonrpc_return_error(struct jsonrpc_request *r, int code,
@@ -984,6 +989,9 @@ void jsonrpc_return_successv(struct jsonrpc_request *r, const char *result_fmt,
   } else {
     mjson_printf(r->fn, r->fn_data, "%s", "null");
   }
+  if (r->jsonrpc_2) {
+    mjson_printf(r->fn, r->fn_data, "%s", ",\"jsonrpc\":\"2.0\"");
+  }
   mjson_printf(r->fn, r->fn_data, "}\n");
 }
 
@@ -1000,7 +1008,7 @@ void jsonrpc_ctx_process(struct jsonrpc_ctx *ctx, const char *buf, int len,
   const char *result = NULL, *error = NULL;
   int result_sz = 0, error_sz = 0;
   struct jsonrpc_method *m = NULL;
-  struct jsonrpc_request r = {ctx, buf, len, 0, 0, 0, 0, 0, 0, fn, fn_data, ud};
+  struct jsonrpc_request r = {ctx, buf, len, 0, 0, 0, 0, 0, 0, fn, fn_data, ud, 0};
 
   // Is is a response frame?
   mjson_find(buf, len, "$.result", &result, &result_sz);
@@ -1021,6 +1029,28 @@ void jsonrpc_ctx_process(struct jsonrpc_ctx *ctx, const char *buf, int len,
   // id and params are optional
   mjson_find(buf, len, "$.id", &r.id, &r.id_len);
   mjson_find(buf, len, "$.params", &r.params, &r.params_len);
+
+
+  const char* jsonrpc = NULL;
+  int jsonrpc_len = 0;
+  int jsonrpc_type = mjson_find(buf, len, "$.jsonrpc", &jsonrpc, &jsonrpc_len);
+  if (jsonrpc_len == 0) {
+    r.jsonrpc_2 = 0;
+  }
+  else if (jsonrpc_type != MJSON_TOK_STRING || 
+           jsonrpc_len != 5 || 
+           strncmp("\"2.0\"", jsonrpc, 5)) {
+    if (r.id_len != 0) {
+      mjson_printf(fn, fn_data,
+                  "{\"jsonrpc\":\"2.0\",\"id\":%.*s,\"error\":{\"code\":-32600,"
+                  "\"message\":\"Value of jsonrpc must be the string 2.0\"}}\n",
+                  r.id_len, r.id);
+    }
+    return;
+  }
+  else {
+    r.jsonrpc_2 = 1;
+  }
 
   for (m = ctx->methods; m != NULL; m = m->next) {
     if (mjson_globmatch(m->method, m->method_sz, r.method + 1,
