@@ -21,6 +21,7 @@
 
 #include <float.h>
 #include <math.h>
+#include <alloca.h>
 
 #include "mjson.h"
 
