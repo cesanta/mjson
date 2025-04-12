@@ -740,7 +740,7 @@ static int is_digit(int c) {
 /* NOTE: strtod() implementation by Yasuhiro Matsumoto. */
 static double mystrtod(const char *str, const char **end) {
   double d = 0.0;
-  int sign = 1, n = 0;
+  int sign = 1;
   const char *p = str, *a = str;
 
   /* decimal part */
@@ -755,7 +755,6 @@ static double mystrtod(const char *str, const char **end) {
     while (*p && is_digit(*p)) {
       d = d * 10.0 + (double) (*p - '0');
       ++p;
-      ++n;
     }
     a = p;
   } else if (*p != '.') {
@@ -774,7 +773,6 @@ static double mystrtod(const char *str, const char **end) {
         f += base * (*p - '0');
         base /= 10.0;
         ++p;
-        ++n;
       }
     }
     d += f * sign;
